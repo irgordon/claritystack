@@ -11,9 +11,9 @@ class AuthController {
         $input = json_decode(file_get_contents('php://input'), true);
         $email = filter_var($input['email'], FILTER_VALIDATE_EMAIL);
         
-        $user = $this->db->prepare("SELECT id FROM users WHERE email = ?");
-        $user->execute([$email]);
-        $uid = $user->fetchColumn();
+        $userStmt = $this->db->prepare("SELECT id FROM users WHERE email = ?");
+        $userStmt->execute([$email]);
+        $uid = $userStmt->fetchColumn();
 
         if ($uid) {
             $selector = bin2hex(random_bytes(12));
@@ -39,6 +39,7 @@ class AuthController {
         if ($row && hash_equals($row['token_hash'], hash('sha256', $input['token']))) {
             $this->db->prepare("DELETE FROM auth_tokens WHERE id = ?")->execute([$row['id']]);
             session_start();
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $row['user_id'];
             echo json_encode(['status' => 'success']);
         } else {
@@ -46,3 +47,4 @@ class AuthController {
         }
     }
 }
+?>
