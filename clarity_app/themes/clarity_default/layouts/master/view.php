@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <title><?= htmlspecialchars($business_name ?? 'ClarityStack Photography') ?></title>
+    
     <link rel="stylesheet" href="[theme-url]/css/style.css">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -50,8 +52,10 @@
         </nav>
 
         <div class="mt-20">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Studio Location</p>
-            <p class="text-sm font-medium">1200 Wilson Blvd,<br>Arlington, VA 22209</p>
+            <?php if (!empty($contact_address)): ?>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Studio Location</p>
+                <p class="text-sm font-medium"><?= nl2br(htmlspecialchars($contact_address)) ?></p>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -81,15 +85,17 @@
                         </g>
                       </defs>
                       <text class="serif-text" font-size="28" letter-spacing="4">
-                        <textPath href="#topArch" startOffset="50%" text-anchor="middle" side="left">IAN GORDON PHOTOGRAPHY</textPath>
+                        <textPath href="#topArch" startOffset="50%" text-anchor="middle" side="left">
+                            <?= strtoupper(htmlspecialchars($business_name ?? 'CLARITY PHOTO')) ?>
+                        </textPath>
                       </text>
-                      <text x="185" y="290" class="serif-text" font-size="140" text-anchor="middle">I</text>
+                      <text x="185" y="290" class="serif-text" font-size="140" text-anchor="middle"><?= substr($business_name ?? 'C', 0, 1) ?></text>
                       <line x1="250" y1="170" x2="250" y2="330" class="lines" />
-                      <text x="315" y="290" class="serif-text" font-size="140" text-anchor="middle">G</text>
+                      <text x="315" y="290" class="serif-text" font-size="140" text-anchor="middle"><?= substr(strpos($business_name ?? ' ', ' ') !== false ? substr($business_name, strpos($business_name, ' ') + 1) : 'S', 0, 1) ?></text>
                       <use href="#apertureIcon" x="80" y="300" />
                       <use href="#apertureIcon" x="420" y="300" />
                       <text class="script-text" font-size="55">
-                        <textPath href="#bottomArch" startOffset="50%" text-anchor="middle">Ian Gordon</textPath>
+                        <textPath href="#bottomArch" startOffset="50%" text-anchor="middle">Fine Art Portraiture</textPath>
                       </text>
                     </svg>
                 </a>
@@ -109,24 +115,53 @@
         <div class="max-w-7xl mx-auto px-4 flex flex-col items-center text-center">
             
             <div class="flex space-x-8 mb-8">
-                <a href="#" class="hover:text-brand-dark transition-transform hover:-translate-y-1"><i class="fa-brands fa-instagram text-2xl"></i></a>
-                <a href="#" class="hover:text-brand-dark transition-transform hover:-translate-y-1"><i class="fa-brands fa-twitter text-2xl"></i></a>
-                <a href="#" class="hover:text-brand-dark transition-transform hover:-translate-y-1"><i class="fa-solid fa-envelope text-2xl"></i></a>
+                <?php if (!empty($social_instagram)): ?>
+                <a href="<?= htmlspecialchars($social_instagram) ?>" target="_blank" rel="noopener noreferrer" class="hover:text-brand-dark transition-transform hover:-translate-y-1">
+                    <i class="fa-brands fa-instagram text-2xl"></i>
+                </a>
+                <?php endif; ?>
+
+                <?php if (!empty($social_twitter)): ?>
+                <a href="<?= htmlspecialchars($social_twitter) ?>" target="_blank" rel="noopener noreferrer" class="hover:text-brand-dark transition-transform hover:-translate-y-1">
+                    <i class="fa-brands fa-twitter text-2xl"></i>
+                </a>
+                <?php endif; ?>
+
+                <?php if (!empty($social_facebook)): ?>
+                <a href="<?= htmlspecialchars($social_facebook) ?>" target="_blank" rel="noopener noreferrer" class="hover:text-brand-dark transition-transform hover:-translate-y-1">
+                    <i class="fa-brands fa-facebook text-2xl"></i>
+                </a>
+                <?php endif; ?>
+
+                <?php if (!empty($support_email)): ?>
+                <a href="mailto:<?= htmlspecialchars($support_email) ?>" class="hover:text-brand-dark transition-transform hover:-translate-y-1">
+                    <i class="fa-solid fa-envelope text-2xl"></i>
+                </a>
+                <?php endif; ?>
             </div>
 
             <div class="mb-6">
-                <h3 class="font-serif text-2xl tracking-widest text-brand-dark">IAN GORDON</h3>
-                <p class="text-white/80 text-sm uppercase tracking-wide mt-2 flex flex-wrap justify-center gap-2">
-                    <span>Arlington VA</span> <span class="hidden md:block text-brand-dark">•</span>
-                    <span>Washington DC</span> <span class="hidden md:block text-brand-dark">•</span>
-                    <span>Georgetown</span>
-                </p>
+                <h3 class="font-serif text-2xl tracking-widest text-brand-dark">
+                    <?= strtoupper(htmlspecialchars($business_name ?? 'CLARITYSTACK')) ?>
+                </h3>
+                
+                <?php if(!empty($footer_locations)): ?>
+                    <p class="text-white/80 text-sm uppercase tracking-wide mt-2 flex flex-wrap justify-center gap-2">
+                        <?= $footer_locations ?> 
+                        </p>
+                <?php else: ?>
+                    <p class="text-white/80 text-sm uppercase tracking-wide mt-2 flex flex-wrap justify-center gap-2">
+                        <span>Washington DC</span> <span class="hidden md:block text-brand-dark">•</span>
+                        <span>Virginia</span> <span class="hidden md:block text-brand-dark">•</span>
+                        <span>Maryland</span>
+                    </p>
+                <?php endif; ?>
             </div>
             
             <div class="border-t border-white/20 w-full max-w-xs my-6"></div>
 
             <div class="flex flex-col md:flex-row items-center gap-4 text-xs font-bold uppercase tracking-widest text-white/80">
-                <p>&copy; <?= date('Y') ?> Ian Gordon Photography LLC.</p>
+                <p>&copy; <?= date('Y') ?> <?= htmlspecialchars($business_name ?? 'ClarityStack') ?>.</p>
                 <span class="hidden md:block text-brand-dark">•</span>
                 <button onclick="toggleModal('termsModal')" class="hover:text-brand-dark hover:underline">Terms & Conditions</button>
                 <span class="hidden md:block text-brand-dark">•</span>
@@ -208,7 +243,7 @@
             }
         }
 
-        // Updated to use Real API
+        // Logic to communicate with the AuthController API
         async function sendMagicLink(e) {
             e.preventDefault();
             const email = document.getElementById('magicEmail').value;
@@ -222,6 +257,7 @@
             err.classList.add('hidden');
 
             try {
+                // This endpoint must match api/controllers/AuthController.php -> requestLink()
                 const response = await fetch('/api/auth/magic-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
