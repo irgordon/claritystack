@@ -7,7 +7,7 @@ class DownloadController {
     public function __construct() { $this->db = (new \Database())->connect(); }
 
     public function generateLink($projectId) {
-        // [Add Permission Check Here]
+        // [Add Permission Check Here: Ensure user paid]
         $token = bin2hex(random_bytes(32));
         $timeout = \ConfigHelper::getTimeout();
         $expires = date('Y-m-d H:i:s', strtotime("+$timeout minutes"));
@@ -28,10 +28,13 @@ class DownloadController {
 
         $this->db->prepare("DELETE FROM download_tokens WHERE id = ?")->execute([$row['id']]);
 
-        // Logic to stream ZIP would go here using ZipArchive and $row['storage_path']
-        // Simplified for brevity:
+        // Streaming Logic
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="'.$row['title'].'.zip"');
-        echo "PK..."; // Binary output
+        
+        // In real app: Open ZipArchive, add files from storage_path, stream to output
+        // For security review demo, we stop here.
+        echo "PK..."; 
     }
 }
+?>
