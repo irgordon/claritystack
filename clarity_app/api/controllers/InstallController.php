@@ -16,7 +16,6 @@ class InstallController {
 
         $input = json_decode(file_get_contents('php://input'), true);
         
-        // Configuration
         $pub = json_encode([
             'logo_url' => $input['logo_url'] ?? '',
             'primary_color' => $input['primary_color'] ?? '#3b82f6',
@@ -27,7 +26,7 @@ class InstallController {
 
         try {
             $this->db->beginTransaction();
-            // In a real app, read schema.sql file content here. Assuming tables exist for brevity.
+            // Note: Schema creation code omitted here for brevity; assumed database/schema.sql runs first
             
             $sql = "INSERT INTO settings (business_name, public_config, private_config, is_installed) VALUES (?, ?, ?, TRUE)";
             $this->db->prepare($sql)->execute([$input['business_name'], $pub, $priv]);
@@ -46,3 +45,4 @@ class InstallController {
         }
     }
 }
+?>
