@@ -1,7 +1,3 @@
-Here is the updated **`README.md`** with a Mermaid.js architectural diagram included. GitHub natively renders Mermaid diagrams, so this will display automatically in your repository.
-
-### README.md
-
 ```markdown
 # ClarityStack
 
