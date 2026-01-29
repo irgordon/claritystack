@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CLARITYSTACK BRANDING ENGINE
+  These variables are updated at runtime by src/context/BrandingContext.jsx
+  based on the settings fetched from the database.
+*/
+:root {
+  /* Default Branding (Fallback) */
+  --primary-brand: #3b82f6;   /* blue-500 */
+  --secondary-brand: #1f2937; /* gray-800 */
+  --font-heading: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --border-radius: 8px;
+  
+  /* Layout Constants */
+  --sidebar-width: 280px;
+  --header-height: 64px;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer components {
+  /* CMS BLOCK COMPONENTS 
+     Used by the ThemeEngine to render HTML blocks consistently
+  */
+  
+  .btn-primary {
+    @apply px-4 py-2 rounded shadow text-white font-bold transition-colors duration-200;
+    background-color: var(--primary-brand);
+    border-radius: var(--border-radius);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(110%);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded shadow text-white font-bold transition-colors duration-200;
+    background-color: var(--secondary-brand);
+    border-radius: var(--border-radius);
+  }
+
+  /* Admin Dashboard Cards */
+  .dashboard-card {
+    @apply bg-white p-6 rounded shadow border-l-4;
+    border-radius: var(--border-radius);
+  }
+  
+  /* Form Inputs */
+  .input-field {
+    @apply w-full border-gray-300 rounded-md border p-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  }
+}
+
+/* PRINT STYLES
+   Ensure invoices and receipts print cleanly
+*/
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .dashboard-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
