@@ -71,7 +71,7 @@ class ThemeEngine {
         $this->db->prepare("INSERT INTO system_logs (severity, category, message, context) VALUES (?, 'cms', ?, ?)")
                  ->execute([$severity, $message, json_encode($context)]);
     }
-    
+
     public function getAvailableBlocks() {
         $blocks = [];
         $dir = $this->themePath . '/blocks';
@@ -88,3 +88,4 @@ class ThemeEngine {
         return $blocks;
     }
 }
+?>
