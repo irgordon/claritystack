@@ -28,7 +28,7 @@ export default function PageEditor() {
     useEffect(() => { secureFetch('/api/admin/cms/blocks').then(setBlocks); }, []);
 
     const addBlock = (path, type) => {
-        // Implementation omitted for brevity: Deep clone tree, push to path
+        // Deep clone tree & insert logic omitted for brevity
         console.log("Add", type, "to", path);
     };
 
