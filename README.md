@@ -12,44 +12,57 @@
 
 ---
 
-## 🚀 Key Features
+## 🏗️ Architectural Overview
 
-### 🎨 Hybrid Theme Engine
-* **Performance:** Public marketing pages (Home, Portfolio, Pricing) are server-side rendered (SSR) via PHP for 100/100 Lighthouse SEO scores.
-* **Reactivity:** The Admin Dashboard and Client Portal operate as a Single Page Application (SPA) using React for a fluid user experience.
-* **Recursive Block Builder:** A drag-and-drop page builder that allows nested layouts (e.g., Columns inside Containers) with a robust "Safety Net" that prevents white-screen crashes.
+ClarityStack utilizes a **Hybrid Monolith** architecture. It serves public marketing pages via Server-Side Rendering (SSR) for optimal SEO, while the Admin Dashboard and Client Portal run as a React Single Page Application (SPA).
 
-### 📸 Secure Client Proofing
-* **IDOR Protection:** High-resolution original files are stored **outside** the web root. Access is proxied via a secure PHP controller that verifies session ownership before streaming bytes.
-* **Magic Links:** Passwordless authentication for clients via secure, time-bound email links.
-* **Secure Downloads:** Large ZIP downloads are generated on-the-fly and streamed via signed, one-time-use URLs to prevent memory exhaustion and unauthorized sharing.
+```mermaid
+graph TD
+    User((User / Client))
+    
+    subgraph Server_Environment [Web Server (Nginx/Apache)]
+        direction TB
+        Router{Routing Layer}
+        
+        subgraph Public_Zone [Public Web Root]
+            Assets[Static Assets / CSS / JS]
+            SEO[index.php / SEO Engine]
+        end
+        
+        subgraph App_Zone [React Application]
+            SPA[React Admin Dashboard]
+            Portal[Client Portal]
+        end
+    end
+    
+    subgraph Secure_Backend [Private Backend (Outside Web Root)]
+        API[PHP REST API]
+        ThemeEngine[Theme Engine]
+        Auth[Auth & Security]
+        FileProxy[File Proxy Controller]
+    end
 
-### 💰 Studio Management
-* **Stripe Integration:** Automated booking flow with webhook verification (Signature & Idempotency checks).
-* **EXIF Extraction:** Automatically extracts camera, lens, and exposure data from uploaded JPEGs for display.
-* **Dynamic Watermarking:** (Optional) On-the-fly watermark injection for unpaid proofing galleries.
+    subgraph Data_Persistence [Data Layer]
+        DB[(PostgreSQL 15)]
+        Storage[Secure Storage / Uploads]
+    end
 
----
+    %% Flows
+    User -->|HTTPS Request| Router
+    
+    %% Flow 1: Marketing / Public Site (SSR)
+    Router -->|GET /about| SEO
+    SEO --> ThemeEngine
+    ThemeEngine -->|Fetch Blocks| DB
+    ThemeEngine -->|Return HTML| User
 
-## 🛠️ Tech Stack
-
-* **Backend:** PHP 8.2+ (PSR-4 Autoloading, No Heavy Frameworks)
-* **Frontend:** React 18, TailwindCSS, Vite
-* **Database:** PostgreSQL 15 (JSONB used for flexible Content Blocks)
-* **Infrastructure:** Docker-ready, Local Filesystem or S3 Storage Adapters
-
----
-
-## 📂 Directory Structure
-
-```text
-ClarityStack/
-├── api/                  # PHP Core & Controllers
-│   ├── core/             # ThemeEngine, Security, Database
-│   └── controllers/      # API Endpoints
-├── themes/               # CMS Themes
-│   └── clarity_default/  # The default 'Ian Gordon Photography' theme
-├── src/                  # React Admin Dashboard (Source)
-├── public/               # Web Root (Entry Point)
-├── storage_secure/       # Private Uploads (Outside Web Root)
-└── database/             # SQL Schema & Migrations
+    %% Flow 2: App Interaction (SPA)
+    Router -->|GET /admin| SPA
+    SPA -->|JSON API Calls| API
+    API --> Auth
+    Auth --> DB
+    
+    %% Flow 3: Secure File Access
+    User -->|GET /api/files/view| FileProxy
+    FileProxy -->|Validate Session| Auth
+    FileProxy -->|Stream Bytes| Storage
