@@ -11,7 +11,7 @@ class ProjectController {
         $limit = 50;
         $offset = ($page - 1) * $limit;
 
-        $stmt = $this->db->prepare("SELECT id, thumb_path FROM photos WHERE project_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?");
+        $stmt = $this->db->prepare("SELECT id, thumb_path, original_filename FROM photos WHERE project_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?");
         $stmt->execute([$projectId, $limit, $offset]);
         
         $total = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
@@ -26,3 +26,4 @@ class ProjectController {
         ]);
     }
 }
+?>
