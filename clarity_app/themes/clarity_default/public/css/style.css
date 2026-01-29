@@ -1,32 +1,35 @@
-/* Clarity Default Theme Styles */
-
-/* Smooth Scrolling */
-html {
-    scroll-behavior: smooth;
+/* Custom Gradient Definitions */
+.brand-gradient-overlay { 
+    background: linear-gradient(135deg, rgba(14, 137, 102, 0.9) 0%, rgba(148, 229, 229, 0.85) 50%, rgba(250, 150, 128, 0.9) 100%);
 }
 
-/* Custom Scrollbar for Webkit */
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #f1f1f1; 
-}
-::-webkit-scrollbar-thumb {
-    background: #c1c1c1; 
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8; 
+.glass { 
+    background: rgba(255, 255, 255, 0.98); 
+    backdrop-filter: blur(10px); 
 }
 
-/* Typography Overrides */
-h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
+/* Logo Specific Styles */
+.serif-text { 
+    font-family: 'Cinzel', serif; 
+    font-weight: 700; 
+    fill: black; 
+}
+.script-text { 
+    font-family: 'Meie Script', cursive; 
+    fill: black; 
+}
+.lines { 
+    stroke: black; 
+    stroke-width: 4; 
+    stroke-linecap: square; 
 }
 
-/* CMS Content Utility */
-.prose img {
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+/* Menu Transition */
+.menu-slide { 
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+}
+
+/* Utility to hide scrollbar when modal is open */
+body.modal-open {
+    overflow: hidden;
 }
