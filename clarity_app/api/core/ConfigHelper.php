@@ -15,7 +15,7 @@ class ConfigHelper {
         }
 
         try {
-            $db = (new \Database())->connect();
+            $db = \Database::getInstance()->connect();
             $stmt = $db->query("SELECT public_config FROM settings LIMIT 1");
             $row = $stmt->fetch();
 

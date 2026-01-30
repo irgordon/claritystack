@@ -8,7 +8,7 @@ class SettingsController {
     private $db;
 
     public function __construct() {
-        $this->db = (new \Database())->connect();
+        $this->db = \Database::getInstance()->connect();
     }
 
     /**

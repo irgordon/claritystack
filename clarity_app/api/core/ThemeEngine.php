@@ -18,7 +18,7 @@ class ThemeEngine {
     public function __construct($themeName = 'clarity_default') {
         $this->themePath = __DIR__ . '/../../themes/' . $themeName;
         $this->publicUrl = '/themes/' . $themeName . '/public';
-        $this->db = (new \Database())->connect();
+        $this->db = \Database::getInstance()->connect();
     }
 
     public function renderPage($layoutSlug, $blocksTree) {

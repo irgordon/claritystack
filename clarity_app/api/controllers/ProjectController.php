@@ -3,7 +3,7 @@ require_once __DIR__ . '/../core/Database.php';
 
 class ProjectController {
     private $db;
-    public function __construct() { $this->db = (new \Database())->connect(); }
+    public function __construct() { $this->db = \Database::getInstance()->connect(); }
 
     public function listPhotos($projectId) {
         // [Add Auth Check Here]
