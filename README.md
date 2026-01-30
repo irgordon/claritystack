@@ -20,7 +20,7 @@ ClarityStack utilizes a **Hybrid Monolith** architecture. It serves public marke
 graph TD
     User((User / Client))
     
-    subgraph Server_Environment [Web Server (Nginx/Apache)]
+    subgraph Server_Environment ["Web Server (Nginx/Apache)"]
         direction TB
         Router{Routing Layer}
         
@@ -35,7 +35,7 @@ graph TD
         end
     end
     
-    subgraph Secure_Backend [Private Backend (Outside Web Root)]
+    subgraph Secure_Backend ["Private Backend (Outside Web Root)"]
         API[PHP REST API]
         ThemeEngine[Theme Engine]
         Auth[Auth & Security]
