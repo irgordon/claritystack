@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 - **ConfigHelper**: Implemented request-lifecycle caching for `getTimeout()` to eliminate repeated database queries, reducing overhead by ~99% for multiple calls.
 
+### Security
+- **Hardcoded Secrets**: Removed hardcoded encryption key from `Core\Security` and implemented secure loading from `env.php`.
+- **Directory Traversal**: Implemented strict path validation in `LocalAdapter` to prevent directory traversal attacks.
+- **Rate Limiting**: Refactored `AuthController` to use the centralized `Core\RateLimiter` class, ensuring consistent protection against brute force attacks.
+
+### Refactor
+- **Directory Structure**: Consolidated storage adapters into `clarity_app/api/core/Storage/` and removed duplicate `api/` directory.
+- **Storage**: Introduced `StorageInterface` and `LocalAdapter` to standardize file operations across different providers.
+
 ## [1.0.0] - 2026-01-29
 
 ### 🚀 Initial Release

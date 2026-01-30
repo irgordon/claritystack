@@ -2,21 +2,34 @@
 namespace Core;
 
 class Security {
-    // In production, load this from .env
-    // key example 'b1a2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0fedcba9876543210' do not use this one obviously
-    //
-    private static $key = 'CHANGE_THIS_TO_A_LONG_RANDOM_STRING_IN_PROD'; 
+    private static $key = null;
+
+    private static function getKey() {
+        if (self::$key === null) {
+            $config = require __DIR__ . '/../config/env.php';
+            self::$key = $config['APP_KEY'];
+        }
+        return self::$key;
+    }
 
     public static function encrypt($data) {
-        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-        $encrypted = openssl_encrypt($data, 'aes-256-cbc', self::$key, 0, $iv);
+        $key = self::getKey();
+        $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+        $iv = openssl_random_pseudo_bytes($ivLength);
+        $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
         return base64_encode($encrypted . '::' . $iv);
     }
 
     public static function decrypt($data) {
+        $key = self::getKey();
         if (!$data) return '';
-        list($encrypted_data, $iv) = explode('::', base64_decode($data), 2);
-        return openssl_decrypt($encrypted_data, 'aes-256-cbc', self::$key, 0, $iv);
+
+        $decoded = base64_decode($data);
+        if (strpos($decoded, '::') === false) {
+            return '';
+        }
+
+        list($encrypted_data, $iv) = explode('::', $decoded, 2);
+        return openssl_decrypt($encrypted_data, 'aes-256-cbc', $key, 0, $iv);
     }
 }
-?>

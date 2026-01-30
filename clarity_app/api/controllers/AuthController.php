@@ -3,8 +3,10 @@ require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/ConfigHelper.php';
 require_once __DIR__ . '/../core/EmailService.php';
 require_once __DIR__ . '/../core/Csrf.php';
+require_once __DIR__ . '/../core/RateLimiter.php';
 
 use Core\Csrf;
+use Core\RateLimiter;
 
 class AuthController {
     private $db;
@@ -20,7 +22,10 @@ class AuthController {
     public function requestLink() {
         // 1. SECURITY: Rate Limiting
         // Allow 5 attempts per 60 seconds per IP to prevent Email Flooding
-        $this->checkRateLimit($_SERVER['REMOTE_ADDR'], 5, 60);
+        if (!RateLimiter::check($_SERVER['REMOTE_ADDR'], 5, 60)) {
+            http_response_code(429);
+            die(json_encode(['error' => 'Too many requests. Please try again later.']));
+        }
 
         $input = json_decode(file_get_contents('php://input'), true);
         $email = filter_var($input['email'] ?? '', FILTER_VALIDATE_EMAIL);
@@ -65,7 +70,10 @@ class AuthController {
     public function verifyLink() {
         // 1. SECURITY: Rate Limiting (Stricter)
         // Prevent brute forcing the token (though cryptographically unlikely)
-        $this->checkRateLimit($_SERVER['REMOTE_ADDR'], 10, 60);
+        if (!RateLimiter::check($_SERVER['REMOTE_ADDR'], 10, 60)) {
+            http_response_code(429);
+            die(json_encode(['error' => 'Too many requests. Please try again later.']));
+        }
 
         $input = json_decode(file_get_contents('php://input'), true);
         $selector = $input['selector'] ?? '';
@@ -99,28 +107,5 @@ class AuthController {
         }
     }
 
-    /**
-     * Helper: Simple File-based Rate Limiter
-     */
-    private function checkRateLimit($ip, $limit, $seconds) {
-        $tempDir = sys_get_temp_dir();
-        $file = $tempDir . '/ratelimit_' . md5($ip);
-        
-        $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-        
-        // Filter out timestamps older than $seconds
-        $now = time();
-        $data = array_filter($data, function($timestamp) use ($now, $seconds) {
-            return $timestamp > ($now - $seconds);
-        });
-
-        if (count($data) >= $limit) {
-            http_response_code(429);
-            die(json_encode(['error' => 'Too many requests. Please try again later.']));
-        }
-
-        $data[] = $now;
-        file_put_contents($file, json_encode($data));
-    }
 }
 ?>
