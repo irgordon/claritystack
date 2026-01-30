@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791.svg)
 
-**ClarityStack** is a high-performance, hybrid CMS and Client Proofing Platform designed specifically for photography studios and creative agencies. It combines a secure, headless PHP backend with a reactive React-based Admin Dashboard.
+**ClarityStack** is a modern, photographer‑first platform that makes managing, sharing, and delivering work feel effortless. Built for studios and creative teams, it blends a secure, behind‑the‑scenes engine with a fast, intuitive dashboard—so you can focus on creating, not wrestling with software. From client proofing to project management, everything stays clean, simple, and confidently under your control.
 
 🌐 **Website:** [iangordon.app/claritystack](https://iangordon.app/claritystack)  
 👨‍💻 **Author:** Ian Gordon
