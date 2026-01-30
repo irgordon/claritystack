@@ -163,11 +163,17 @@ class ThemeEngine {
         // Load HTML with UTF-8 fix
         $this->dom->loadHTML(mb_convert_encoding("<div>$dirtyHtml</div>", 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
-        $xpath = new DOMXPath($this->dom);
-
         // 1. Remove Disallowed Tags (Script, Object, Iframe, Style, etc.)
         // We select ALL elements and remove those not in our allowed list
-        foreach ($xpath->query('//*') as $node) {
+        $nodes = $this->dom->getElementsByTagName('*');
+        $nodesList = iterator_to_array($nodes);
+
+        foreach ($nodesList as $node) {
+            // Check if node is still attached or part of a removed branch
+            if (!$node->parentNode) {
+                continue;
+            }
+
             if (!in_array($node->nodeName, self::ALLOWED_TAGS)) {
                 $node->parentNode->removeChild($node);
             } else {

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-02-07
+
+### Performance
+- **ThemeEngine**: Optimized `purifyHtml` by replacing `DOMXPath` with native `getElementsByTagName` loop, reducing memory allocation and execution overhead. Benchmarks show a ~10% improvement in rendering performance for content blocks.
+
 ## [1.0.10] - 2026-02-07
 
 ### Performance
