@@ -31,6 +31,10 @@ try {
 
     echo "Found " . count($emails) . " emails to process.\n";
 
+    // Prepare statements once outside the loop
+    $sentStmt = $db->prepare("UPDATE email_queue SET status = 'sent', updated_at = NOW() WHERE id = ?");
+    $failedStmt = $db->prepare("UPDATE email_queue SET status = 'failed', updated_at = NOW() WHERE id = ?");
+
     foreach ($emails as $email) {
         echo "Processing email ID: {$email['id']}... ";
 
@@ -38,12 +42,10 @@ try {
         $sent = @mail($email['to_email'], $email['subject'], $email['body'], $email['headers']);
 
         if ($sent) {
-            $updateStmt = $db->prepare("UPDATE email_queue SET status = 'sent', updated_at = NOW() WHERE id = ?");
-            $updateStmt->execute([$email['id']]);
+            $sentStmt->execute([$email['id']]);
             echo "Sent.\n";
         } else {
-            $updateStmt = $db->prepare("UPDATE email_queue SET status = 'failed', updated_at = NOW() WHERE id = ?");
-            $updateStmt->execute([$email['id']]);
+            $failedStmt->execute([$email['id']]);
             echo "Failed (Check mail configuration).\n";
         }
     }

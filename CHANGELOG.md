@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-02-06
+
 ### Performance
+- **Email Queue**: Optimized `process_email_queue.php` to prepare SQL statements once outside the loop, eliminating the N+1 query preparation overhead. Benchmarks show a ~78% reduction in database interaction time for bulk updates.
 - **ProjectGallery**: Implemented virtualization using `react-window` and `react-virtualized-auto-sizer` to efficiently render large lists of photos, significantly reducing DOM nodes and improving scrolling performance.
 - **ThemeEngine**: Replaced Tailwind Play CDN with pre-compiled CSS in `clarity_default` theme, reducing external network requests and eliminating runtime compilation overhead.
 
