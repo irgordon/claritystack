@@ -39,6 +39,7 @@ class FileController {
         $path = $isThumb ? $photo['thumb_path'] : $photo['system_filename'];
         
         header("Content-Type: " . ($isThumb ? 'image/jpeg' : $photo['mime_type']));
+        header('Cache-Control: max-age=86400');
         $this->storage->output($path);
     }
 }
