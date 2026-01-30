@@ -2,13 +2,23 @@
 require_once __DIR__ . '/Database.php';
 
 class EmailService {
+    private static $templateCache = [];
+    private static $settingsCache = null;
+
     public static function send($toEmail, $templateKey, $data = []) {
         $db = \Database::getInstance()->connect();
 
         // 1. Fetch Template
-        $stmt = $db->prepare("SELECT subject, body_content FROM email_templates WHERE key_name = ?");
-        $stmt->execute([$templateKey]);
-        $template = $stmt->fetch();
+        if (isset(self::$templateCache[$templateKey])) {
+            $template = self::$templateCache[$templateKey];
+        } else {
+            $stmt = $db->prepare("SELECT subject, body_content FROM email_templates WHERE key_name = ?");
+            $stmt->execute([$templateKey]);
+            $template = $stmt->fetch();
+            if ($template) {
+                self::$templateCache[$templateKey] = $template;
+            }
+        }
 
         if (!$template) {
             error_log("Email Error: Template '$templateKey' not found.");
@@ -16,8 +26,15 @@ class EmailService {
         }
 
         // 2. Fetch Branding
-        $settingStmt = $db->query("SELECT business_name, public_config FROM settings LIMIT 1");
-        $settings = $settingStmt->fetch();
+        if (self::$settingsCache) {
+            $settings = self::$settingsCache;
+        } else {
+            $settingStmt = $db->query("SELECT business_name, public_config FROM settings LIMIT 1");
+            $settings = $settingStmt->fetch();
+            if ($settings) {
+                self::$settingsCache = $settings;
+            }
+        }
         $config = json_decode($settings['public_config'], true);
         
         $brandColor = $config['primary_color'] ?? '#3b82f6';
