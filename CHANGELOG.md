@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **ProjectGallery**: Implemented virtualization using `react-window` and `react-virtualized-auto-sizer` to efficiently render large lists of photos, significantly reducing DOM nodes and improving scrolling performance.
+
 ## [1.0.6] - 2026-02-04
 
 ### Fixed
