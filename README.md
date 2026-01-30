@@ -114,7 +114,7 @@ ClarityStack/
 │   ├── core/             # ThemeEngine, Security, Storage Adapters
 │   └── controllers/      # API Endpoints
 ├── themes/               # CMS Themes
-│   └── clarity_default/  # The default 'Ian Gordon Photography' theme
+│   └── clarity_default/  # The default 'ClarityStack' theme
 ├── src/                  # React Admin Dashboard (Source)
 ├── public/               # Web Root (Entry Point)
 ├── storage_secure/       # Private Uploads (Outside Web Root)
@@ -136,7 +136,7 @@ ClarityStack/
 
 1. **Clone the Repo**
 ```bash
-git clone [https://github.com/your-username/claritystack.git](https://github.com/your-username/claritystack.git)
+git clone [https://github.com/irgordon/claritystack.git](https://github.com/irgordon/claritystack.git)
 
 ```
 
