@@ -12,6 +12,15 @@ class InstallController {
      * Handles the full installation process.
      */
     public function install() {
+        // 0. ENVIRONMENT: Fail-fast Sanity Check
+        try {
+            $this->checkRequirements();
+        } catch (Exception $e) {
+            http_response_code(500); // Internal Server Error (Environment Issue)
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+
         // 1. SECURITY: Check if already installed
         if (file_exists($this->configFile)) {
             // Double check by trying to connect and finding users
@@ -71,6 +80,11 @@ class InstallController {
 
         // 6. Begin Installation Transaction
         try {
+            // Start Transaction to ensure atomicity
+            if (!$pdo->beginTransaction()) {
+                throw new Exception("Could not start database transaction.");
+            }
+
             // Step A: Write Config File
             $configDir = dirname($this->configFile);
             if (!is_dir($configDir)) {
@@ -170,6 +184,9 @@ class InstallController {
             
             $stmtPage->execute([':blocks' => $defaultHomeBlocks]);
 
+            // Commit transaction
+            $pdo->commit();
+
             // Installation Complete
             echo json_encode([
                 'status' => 'success',
@@ -177,6 +194,11 @@ class InstallController {
             ]);
 
         } catch (Exception $e) {
+            // Rollback if active transaction
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
             // Attempt cleanup: remove config file if it was created but DB setup failed
             if (file_exists($this->configFile)) {
                 @unlink($this->configFile);
@@ -195,6 +217,44 @@ class InstallController {
             return $color;
         }
         return '#3b82f6'; // Default Blue
+    }
+
+    /**
+     * Checks if the server environment meets the requirements.
+     * Throws Exception if requirements are not met.
+     */
+    private function checkRequirements() {
+        // 1. Check PHP Version (Require 8.1+)
+        if (version_compare(PHP_VERSION, '8.1.0', '<')) {
+            throw new Exception('PHP 8.1 or higher is required. Current version: ' . PHP_VERSION);
+        }
+
+        // 2. Check Required Extensions
+        $requiredExtensions = ['pdo', 'pdo_pgsql', 'json', 'mbstring', 'filter', 'ctype', 'session'];
+        $missing = [];
+        foreach ($requiredExtensions as $ext) {
+            if (!extension_loaded($ext)) {
+                $missing[] = $ext;
+            }
+        }
+        if (!empty($missing)) {
+            throw new Exception('Missing required PHP extensions: ' . implode(', ', $missing));
+        }
+
+        // 3. Check Directory Permissions (Config must be writable)
+        // If config dir doesn't exist, check parent
+        $configDir = dirname($this->configFile);
+        if (!file_exists($configDir)) {
+             // Check if parent of config dir is writable to create it
+             $parent = dirname($configDir);
+             if (!is_writable($parent)) {
+                 throw new Exception("Parent directory is not writable: $parent");
+             }
+        } else {
+             if (!is_writable($configDir)) {
+                 throw new Exception("Config directory is not writable: $configDir");
+             }
+        }
     }
 }
 ?>
