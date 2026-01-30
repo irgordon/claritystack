@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-02-07
+
+### Performance
+- **Benchmarks**: Added `tests/bench_array_concat.js` to verify and prevent regression of the ProjectGallery state update optimization.
+
 ## [1.0.12] - 2026-02-07
 
 ### Performance
