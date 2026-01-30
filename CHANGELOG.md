@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.9] - 2026-02-06
+
+### Security
+- **DownloadController**: Patched a broken access control vulnerability in `generateLink` that allowed downloading unpaid projects.
+    - **What**: Enforced payment status verification before generating download tokens.
+    - **Why**: To prevent unauthorized access to unpaid deliverables.
+    - **How**: Added logic to validate `session_id`, verify project ownership, and check payment status (Paid/Free/Admin-override) before proceeding.
 
 ### Performance
 - **ThemeEngine**: Implemented `blockFileCache` to cache resolved view file paths, reducing repeated filesystem checks during block rendering. Benchmarks show a ~15% improvement in execution time for repeated block calls.
