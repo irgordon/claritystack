@@ -24,12 +24,12 @@ graph TD
         direction TB
         Router{Routing Layer}
         
-        subgraph Public_Zone [Public Web Root]
+        subgraph Public_Zone ["Public Web Root"]
             Assets[Static Assets / CSS / JS]
             SEO[index.php / SEO Engine]
         end
         
-        subgraph App_Zone [React Application]
+        subgraph App_Zone ["React Application"]
             SPA[React Admin Dashboard]
             Portal[Client Portal]
         end
@@ -42,9 +42,9 @@ graph TD
         FileProxy[File Proxy Controller]
     end
 
-    subgraph Data_Persistence [Data Layer]
+    subgraph Data_Persistence ["Data Layer"]
         DB[(PostgreSQL 15)]
-        Storage[Secure Storage / Uploads]
+        Storage[Secure Storage Adapters]
     end
 
     %% Flows
@@ -66,6 +66,7 @@ graph TD
     User -->|GET /api/files/view| FileProxy
     FileProxy -->|Validate Session| Auth
     FileProxy -->|Stream Bytes| Storage
+    Storage -.->|Adapter| DB
 
 ```
 
@@ -78,12 +79,14 @@ graph TD
 * **Performance:** Public marketing pages (Home, Portfolio, Pricing) are server-side rendered (SSR) via PHP for 100/100 Lighthouse SEO scores.
 * **Reactivity:** The Admin Dashboard and Client Portal operate as a Single Page Application (SPA) using React for a fluid user experience.
 * **Recursive Block Builder:** A drag-and-drop page builder that allows nested layouts (e.g., Columns inside Containers) with a robust "Safety Net" that prevents white-screen crashes.
+* **Secure Output:** Native HTML Sanitization strips malicious scripts while preserving rich text formatting.
 
 ### 📸 Secure Client Proofing
 
 * **IDOR Protection:** High-resolution original files are stored **outside** the web root. Access is proxied via a secure PHP controller that verifies session ownership before streaming bytes.
 * **Magic Links:** Passwordless authentication for clients via secure, time-bound email links.
 * **Secure Downloads:** Large ZIP downloads are generated on-the-fly and streamed via signed, one-time-use URLs to prevent memory exhaustion and unauthorized sharing.
+* **Storage Adapters:** Switch seamlessly between Local Disk, AWS S3, Cloudinary, ImageKit, or Google Drive via the Admin UI.
 
 ### 💰 Studio Management
 
@@ -107,7 +110,8 @@ graph TD
 ```text
 ClarityStack/
 ├── api/                  # PHP Core & Controllers
-│   ├── core/             # ThemeEngine, Security, Database
+│   ├── config/           # Encypted Env Bootloader
+│   ├── core/             # ThemeEngine, Security, Storage Adapters
 │   └── controllers/      # API Endpoints
 ├── themes/               # CMS Themes
 │   └── clarity_default/  # The default 'Ian Gordon Photography' theme
@@ -185,7 +189,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-```
 
 ```
