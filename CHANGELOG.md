@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-02-03
+
+### Performance
+- **Email System**: Transformed `EmailService` to use an asynchronous queue backed by PostgreSQL (`email_queue` table).
+- **Background Processing**: Added `api/scripts/process_email_queue.php` to handle email dispatching, preventing web request blocking and timeout issues during bulk sends or slow SMTP connections.
+
 ## [1.0.4] - 2026-02-02
 
 ### Performance

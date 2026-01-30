@@ -32,12 +32,18 @@ class EmailService {
         // 4. Wrap HTML
         $html = self::wrapHtml($rawBody, $businessName, $logoUrl, $brandColor);
 
-        // 5. Send
+        // 5. Queue Email
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
         $headers .= "From: {$businessName} <{$fromEmail}>" . "\r\n";
 
-        return mail($toEmail, $subject, $html, $headers);
+        try {
+            $stmt = $db->prepare("INSERT INTO email_queue (to_email, subject, body, headers, status) VALUES (?, ?, ?, ?, 'pending')");
+            return $stmt->execute([$toEmail, $subject, $html, $headers]);
+        } catch (Exception $e) {
+            error_log("Email Queue Error: " . $e->getMessage());
+            return false;
+        }
     }
 
     private static function merge($text, $data) {
