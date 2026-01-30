@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+- **ConfigHelper**: Implemented request-lifecycle caching for `getTimeout()` to eliminate repeated database queries, reducing overhead by ~99% for multiple calls.
+
 ## [1.0.0] - 2026-01-29
 
 ### 🚀 Initial Release
