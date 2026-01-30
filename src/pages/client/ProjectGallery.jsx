@@ -32,7 +32,7 @@ export default function ProjectGallery() {
         try {
             const res = await secureFetch(`/api/projects/${id}/photos?page=${p}`);
             if (res.data && Array.isArray(res.data)) {
-                 setPhotos(prev => [...prev, ...res.data]);
+                 setPhotos(prev => prev.concat(res.data));
             }
         } catch (e) {
             console.error(e);
