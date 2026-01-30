@@ -12,6 +12,8 @@ class ThemeEngine {
     private const MAX_RECURSION_DEPTH = 10;
     private $currentDepth = 0;
 
+    private $blockFileCache = [];
+
     // SECURITY: Allowed HTML Tags for CMS Content
     private const ALLOWED_TAGS = ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'img', 'blockquote'];
 
@@ -94,10 +96,22 @@ class ThemeEngine {
 
     private function renderBlock($type, $props, $children) {
         $safeType = preg_replace('/[^a-z0-9_]/', '', $type);
-        $blockPath = $this->themePath . "/blocks/$safeType";
-        $viewFile = file_exists("$blockPath/view.php") ? "$blockPath/view.php" : "$blockPath/view.html";
+
+        if (array_key_exists($safeType, $this->blockFileCache)) {
+            $viewFile = $this->blockFileCache[$safeType];
+        } else {
+            $blockPath = $this->themePath . "/blocks/$safeType";
+            if (file_exists("$blockPath/view.php")) {
+                $viewFile = "$blockPath/view.php";
+            } elseif (file_exists("$blockPath/view.html")) {
+                $viewFile = "$blockPath/view.html";
+            } else {
+                $viewFile = null;
+            }
+            $this->blockFileCache[$safeType] = $viewFile;
+        }
         
-        if (!file_exists($viewFile)) return "";
+        if (!$viewFile) return "";
 
         // SECURITY: HARDENING CMS OUTPUT
         // We sanitize specific props known to contain Rich Text (like 'content')
