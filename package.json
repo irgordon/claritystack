@@ -1,0 +1,32 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4.svg) ![React](https://img.shields.io/badge/React-18-61DAFB.svg) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791.svg)",
+  "main": "postcss.config.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i clarity_app/themes/clarity_default/input.css -o clarity_app/themes/clarity_default/public/css/style.css",
+    "watch:css": "tailwindcss -i clarity_app/themes/clarity_default/input.css -o clarity_app/themes/clarity_default/public/css/style.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irgordon/claritystack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/irgordon/claritystack/issues"
+  },
+  "homepage": "https://github.com/irgordon/claritystack#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "@tailwindcss/forms": "^0.5.11",
+    "@tailwindcss/typography": "^0.5.19",
+    "tailwindcss": "^4.1.18"
+  }
+}

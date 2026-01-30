@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 - **ProjectGallery**: Implemented virtualization using `react-window` and `react-virtualized-auto-sizer` to efficiently render large lists of photos, significantly reducing DOM nodes and improving scrolling performance.
+- **ThemeEngine**: Replaced Tailwind Play CDN with pre-compiled CSS in `clarity_default` theme, reducing external network requests and eliminating runtime compilation overhead.
 
 ## [1.0.7] - 2026-02-05
 
