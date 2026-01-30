@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-02-07
+
+### Performance
+- **RateLimiter**: Replaced file-based I/O with SQLite (using WAL mode), improving request throughput by ~33% (from ~9.3k to ~12.4k ops/sec) and preventing file system exhaustion during high traffic.
+
 ## [1.0.11] - 2026-02-07
 
 ### Performance

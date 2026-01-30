@@ -1,22 +1,77 @@
 <?php
 namespace Core;
 
-class RateLimiter {
-    public static function check($ip, $limit = 5, $seconds = 60) {
-        $file = sys_get_temp_dir() . '/ratelimit_' . md5($ip);
-        $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-        
-        // Remove old attempts
-        $data = array_filter($data, function($timestamp) use ($seconds) {
-            return $timestamp > (time() - $seconds);
-        });
+use PDO;
+use Exception;
 
-        if (count($data) >= $limit) {
-            return false; // Limit Exceeded
+class RateLimiter {
+    private static $pdo = null;
+
+    private static function getPdo() {
+        if (self::$pdo === null) {
+            try {
+                $file = sys_get_temp_dir() . '/global_ratelimit.sqlite';
+                self::$pdo = new PDO("sqlite:$file");
+                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // create table if not exists
+                self::$pdo->exec("CREATE TABLE IF NOT EXISTS rate_limits (
+                    ip TEXT,
+                    timestamp INTEGER
+                )");
+
+                // Indexes for performance
+                // Index for counting attempts by IP in a time window
+                self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_ip_timestamp ON rate_limits(ip, timestamp)");
+
+                // Index for cleanup query (DELETE WHERE timestamp <= ?)
+                self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_timestamp ON rate_limits(timestamp)");
+
+                // Enable WAL mode for better concurrency performance
+                self::$pdo->exec("PRAGMA journal_mode = WAL;");
+                self::$pdo->exec("PRAGMA synchronous = NORMAL;");
+            } catch (Exception $e) {
+                // If DB fails, fail open to avoid blocking users
+                error_log("RateLimiter SQLite error: " . $e->getMessage());
+                return null;
+            }
+        }
+        return self::$pdo;
+    }
+
+    public static function check($ip, $limit = 5, $seconds = 60) {
+        $pdo = self::getPdo();
+        if (!$pdo) {
+            return true; // Fail open
         }
 
-        $data[] = time();
-        file_put_contents($file, json_encode($data));
-        return true;
+        $now = time();
+        $cutoff = $now - $seconds;
+
+        try {
+            // Probabilistic cleanup (1 in 50 chance)
+            if (mt_rand(1, 50) === 1) {
+                $stmt = $pdo->prepare("DELETE FROM rate_limits WHERE timestamp <= ?");
+                $stmt->execute([$cutoff]);
+            }
+
+            // Count attempts in window
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM rate_limits WHERE ip = ? AND timestamp > ?");
+            $stmt->execute([$ip, $cutoff]);
+            $count = (int)$stmt->fetchColumn();
+
+            if ($count >= $limit) {
+                return false;
+            }
+
+            // Record new attempt
+            $stmt = $pdo->prepare("INSERT INTO rate_limits (ip, timestamp) VALUES (?, ?)");
+            $stmt->execute([$ip, $now]);
+
+            return true;
+        } catch (Exception $e) {
+            // If something goes wrong during query, fail open
+            return true;
+        }
     }
 }
