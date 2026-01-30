@@ -6,7 +6,42 @@ class ProjectController {
     public function __construct() { $this->db = \Database::getInstance()->connect(); }
 
     public function listPhotos($projectId) {
-        // [Add Auth Check Here]
+        // 1. Authentication Check
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        // 2. Authorization Check (IDOR Protection)
+        // Verify if user is admin or the project owner
+        $authStmt = $this->db->prepare("
+            SELECT u.role, u.email as user_email, p.client_email
+            FROM users u, projects p
+            WHERE u.id = ? AND p.id = ?
+        ");
+        $authStmt->execute([$userId, $projectId]);
+        $access = $authStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$access) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Project not found']);
+            exit;
+        }
+
+        $isAllowed = ($access['role'] === 'admin') || ($access['user_email'] === $access['client_email']);
+
+        if (!$isAllowed) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            exit;
+        }
+
         $page = (int)($_GET['page'] ?? 1);
         $limit = 50;
         $offset = ($page - 1) * $limit;
