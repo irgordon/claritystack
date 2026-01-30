@@ -1,0 +1,40 @@
+@config "../../../tailwind.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Gradient Definitions */
+.brand-gradient-overlay {
+    background: linear-gradient(135deg, rgba(14, 137, 102, 0.9) 0%, rgba(148, 229, 229, 0.85) 50%, rgba(250, 150, 128, 0.9) 100%);
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+}
+
+/* Logo Specific Styles */
+.serif-text {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    fill: black;
+}
+.script-text {
+    font-family: 'Meie Script', cursive;
+    fill: black;
+}
+.lines {
+    stroke: black;
+    stroke-width: 4;
+    stroke-linecap: square;
+}
+
+/* Menu Transition */
+.menu-slide {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Utility to hide scrollbar when modal is open */
+body.modal-open {
+    overflow: hidden;
+}

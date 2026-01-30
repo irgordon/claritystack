@@ -1,21 +1,25 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./themes/**/*.{php,html}", // Scan CMS Theme files
-    "./api/**/*.{php}"          // Scan Email Templates & backend views
+    "./clarity_app/themes/**/*.{php,html}",
+    "./clarity_app/api/**/*.{php}"
   ],
   theme: {
     extend: {
       colors: {
-        // Map Tailwind utility classes to our CSS variables
         brand: {
+          teal: '#0e8966',
+          cyan: '#94e5e5',
+          salmon: '#fa9680',
+          dark: '#1a202c',
           primary: 'var(--primary-brand)',
           secondary: 'var(--secondary-brand)',
         }
       },
       fontFamily: {
+        sans: ['Inter', 'sans-serif'],
         heading: ['var(--font-heading)', 'sans-serif'],
         body: ['var(--font-body)', 'sans-serif'],
       },
@@ -25,7 +29,7 @@ export default {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'), // For CMS text blocks
-    require('@tailwindcss/forms'),      // For better default inputs
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/forms'),
   ],
 }
