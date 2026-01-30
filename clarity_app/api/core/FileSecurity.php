@@ -1,12 +1,16 @@
 <?php
 namespace Core;
 
+require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/Security.php';
 require_once __DIR__ . '/Storage/StorageFactory.php';
+
 use Core\Storage\StorageFactory;
+use PDO;
 
 class FileSecurity {
     /**
-     * Allowed MIME types and their corresponding file extensions.
+     * Allowed MIME types map.
      * We strictly check Magic Bytes against this list.
      */
     private const ALLOWED_MIMES = [
@@ -14,36 +18,78 @@ class FileSecurity {
         'image/png'  => 'png',
         'image/gif'  => 'gif',
         'image/webp' => 'webp',
-        'image/heic' => 'heic' // Requires Imagick extension usually
+        'image/heic' => 'heic'
     ];
 
+    /**
+     * The Active Storage Adapter (Local, S3, Cloudinary, etc.)
+     */
     private $storage;
 
     /**
-     * Constructor loads the configuration and initializes the correct Storage Adapter.
+     * Constructor
+     * Loads settings from DB -> Decrypts Keys -> Initializes Adapter
      */
     public function __construct() {
-        $configPath = __DIR__ . '/../config/env.php';
-        
-        if (!file_exists($configPath)) {
-            throw new \Exception("Configuration file missing.");
+        // 1. Connect to Database
+        $db = (new \Database())->connect();
+
+        // 2. Fetch Encrypted Settings
+        $stmt = $db->query("SELECT public_config, private_config FROM settings LIMIT 1");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // 3. Prepare Config Array
+        $config = [];
+
+        if (!$row) {
+            // Fallback: If DB is empty (fresh install), default to Local Storage
+            $config = [
+                'STORAGE_DRIVER' => 'local',
+                'STORAGE_PATH'   => __DIR__ . '/../../../../storage_secure'
+            ];
+        } else {
+            // Decode JSON Columns
+            $public  = json_decode($row['public_config'] ?? '{}', true);
+            $private = json_decode($row['private_config'] ?? '{}', true);
+
+            // 4. Decrypt & Map Settings
+            $config = [
+                'STORAGE_DRIVER' => $public['storage_driver'] ?? 'local',
+                'STORAGE_PATH'   => __DIR__ . '/../../../../storage_secure',
+                
+                // Cloudinary Config
+                'CLOUDINARY_NAME'   => $public['cloudinary_name'] ?? '',
+                'CLOUDINARY_KEY'    => $public['cloudinary_key'] ?? '',
+                'CLOUDINARY_SECRET' => Security::decrypt($private['cloudinary_secret'] ?? ''),
+
+                // AWS S3 / Spaces Config
+                'S3_KEY'      => $public['s3_key'] ?? '',
+                'S3_SECRET'   => Security::decrypt($private['s3_secret'] ?? ''),
+                'S3_BUCKET'   => $public['s3_bucket'] ?? '',
+                'S3_REGION'   => $public['s3_region'] ?? 'us-east-1',
+                'S3_ENDPOINT' => $public['s3_endpoint'] ?? '',
+
+                // ImageKit Config
+                'IMAGEKIT_PUBLIC'   => $public['imagekit_public'] ?? '',
+                'IMAGEKIT_PRIVATE'  => Security::decrypt($private['imagekit_private'] ?? ''),
+                'IMAGEKIT_URL'      => $public['imagekit_url'] ?? '',
+                
+                // Google Drive Config
+                // Note: Drive often requires a JSON file path, not just a string key.
+                // We assume the service-account.json is uploaded separately or handled via a path in DB.
+                'DRIVE_ROOT_FOLDER' => $public['drive_root_folder'] ?? ''
+            ];
         }
 
-        $config = require $configPath;
-        
-        // Use the Factory to get the configured storage driver (Local, S3, Cloudinary, etc.)
+        // 5. Initialize the Adapter Factory
         $this->storage = StorageFactory::create($config);
     }
 
     /**
-     * Main entry point for handling a file upload.
-     * * @param array $file The $_FILES['input_name'] array
-     * @param string $projectUuid The UUID of the project this file belongs to
-     * @return array Metadata about the saved file (path, hash, size, exif)
-     * @throws \Exception If validation or upload fails
+     * Main Upload Processor
      */
     public function processUpload(array $file, string $projectUuid) {
-        // 1. Check PHP Upload Errors
+        // 1. Check Upload Errors
         if ($file['error'] !== UPLOAD_ERR_OK) {
             throw new \Exception("Upload error code: " . $file['error']);
         }
@@ -57,20 +103,16 @@ class FileSecurity {
         }
 
         // 3. Generate Secure Paths
-        // We discard the original filename to prevent directory traversal attacks
         $extension = self::ALLOWED_MIMES[$mime];
-        $randomName = bin2hex(random_bytes(16)); // 32-character random string
+        $randomName = bin2hex(random_bytes(16)); // 32 chars
         
-        // The relative path stored in the database
         $originalPath = "$projectUuid/$randomName.$extension";
         $thumbPath = "$projectUuid/{$randomName}_thumb.jpg";
 
-        // 4. Extract Metadata (EXIF) before processing
-        // We do this on the temp file before moving it
+        // 4. Extract EXIF (Metadata)
         $metadata = $this->extractExif($file['tmp_name']);
 
-        // 5. Save Original File to Storage
-        // The adapter handles whether this goes to Local disk, S3, or Cloudinary
+        // 5. Save Original to Cloud/Disk
         $success = $this->storage->put($file['tmp_name'], $originalPath);
         
         if (!$success) {
@@ -78,18 +120,17 @@ class FileSecurity {
         }
 
         // 6. Generate & Save Thumbnail
-        // We create a temporary thumbnail locally, upload it, then delete the temp
         $tempThumb = $file['tmp_name'] . '_thumb.jpg';
         $this->generateThumbnail($file['tmp_name'], $tempThumb, 400);
         
         $this->storage->put($tempThumb, $thumbPath);
         
-        // Cleanup temp thumbnail
+        // Cleanup temp file
         if (file_exists($tempThumb)) {
             unlink($tempThumb);
         }
 
-        // 7. Return Data for Database Insertion
+        // 7. Return Data
         return [
             'system_path' => $originalPath,
             'thumb_path' => $thumbPath,
@@ -101,46 +142,34 @@ class FileSecurity {
     }
 
     /**
-     * Generates a resized JPEG thumbnail from the source image.
-     * * @param string $sourcePath Path to the uploaded temp file
-     * @param string $destPath Path to write the temp thumbnail
-     * @param int $maxWidth Maximum width in pixels
+     * Thumbnail Generator (GD Library)
      */
     private function generateThumbnail($sourcePath, $destPath, $maxWidth) {
         list($width, $height, $type) = getimagesize($sourcePath);
         
-        // Calculate new dimensions preserving aspect ratio
         $ratio = $width / $height;
         $newWidth = $maxWidth;
         $newHeight = $maxWidth / $ratio;
 
-        // Create resource from source
         switch ($type) {
             case IMAGETYPE_JPEG: $src = imagecreatefromjpeg($sourcePath); break;
             case IMAGETYPE_PNG:  $src = imagecreatefrompng($sourcePath); break;
             case IMAGETYPE_GIF:  $src = imagecreatefromgif($sourcePath); break;
             case IMAGETYPE_WEBP: $src = imagecreatefromwebp($sourcePath); break;
-            default: return; // Skip thumbnail if format not supported by GD
+            default: return;
         }
 
         if (!$src) return;
 
         $dst = imagecreatetruecolor($newWidth, $newHeight);
         
-        // Preserve transparency for PNG/WEBP
         if ($type == IMAGETYPE_PNG || $type == IMAGETYPE_WEBP) {
             imagecolortransparent($dst, imagecolorallocatealpha($dst, 0, 0, 0, 127));
             imagealphablending($dst, false);
             imagesavealpha($dst, true);
         }
 
-        // Resample
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-        
-        // Save as JPEG (Quality 60) for thumbnails to keep lists fast
-        // We convert everything to JPG for thumbs to ensure consistency
-        // Note: Transparent backgrounds will turn black in JPG. 
-        // If transparency is critical for thumbs, change this to imagepng.
         imagejpeg($dst, $destPath, 60);
 
         imagedestroy($src);
@@ -148,16 +177,11 @@ class FileSecurity {
     }
 
     /**
-     * Extracts EXIF data safely using PHP's built-in function.
-     * Suppresses warnings for files without EXIF headers.
-     * * @param string $filePath
-     * @return array
+     * EXIF Extractor
      */
     private function extractExif($filePath) {
         try {
-            // Silence warning if file is not JPEG or has no EXIF
             $exif = @exif_read_data($filePath);
-            
             if (!$exif) return [];
 
             return [
@@ -170,7 +194,6 @@ class FileSecurity {
                 'date_taken'   => $exif['DateTimeOriginal'] ?? ''
             ];
         } catch (\Exception $e) {
-            // EXIF extraction is non-critical; return empty array on failure
             return [];
         }
     }
