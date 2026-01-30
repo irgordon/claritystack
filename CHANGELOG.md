@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-02-02
+
+### Performance
+- **Database**: Implemented Singleton pattern for the `Database` class to eliminate redundant connections within a single request.
+- **Optimization**: Updated all controllers and services to use `Database::getInstance()->connect()`, ensuring a shared database connection is reused, significantly reducing connection overhead.
+
 ## [1.0.3] - 2026-01-30
 
 ### Performance

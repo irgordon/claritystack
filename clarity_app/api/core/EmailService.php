@@ -3,7 +3,7 @@ require_once __DIR__ . '/Database.php';
 
 class EmailService {
     public static function send($toEmail, $templateKey, $data = []) {
-        $db = (new \Database())->connect();
+        $db = \Database::getInstance()->connect();
 
         // 1. Fetch Template
         $stmt = $db->prepare("SELECT subject, body_content FROM email_templates WHERE key_name = ?");

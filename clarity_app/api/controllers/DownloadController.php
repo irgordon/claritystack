@@ -4,7 +4,7 @@ require_once __DIR__ . '/../core/ConfigHelper.php';
 
 class DownloadController {
     private $db;
-    public function __construct() { $this->db = (new \Database())->connect(); }
+    public function __construct() { $this->db = \Database::getInstance()->connect(); }
 
     public function generateLink($projectId) {
         // [Add Permission Check Here: Ensure user paid]

@@ -32,7 +32,7 @@ class FileSecurity {
      */
     public function __construct() {
         // 1. Connect to Database
-        $db = (new \Database())->connect();
+        $db = \Database::getInstance()->connect();
 
         // 2. Fetch Encrypted Settings
         $stmt = $db->query("SELECT public_config, private_config FROM settings LIMIT 1");

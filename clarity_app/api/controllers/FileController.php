@@ -7,7 +7,7 @@ class FileController {
     private $storage;
 
     public function __construct() {
-        $this->db = (new \Database())->connect();
+        $this->db = \Database::getInstance()->connect();
         // Path to storage outside webroot
         $this->storage = new \Core\Storage\LocalAdapter('/home/clarity_user/storage_secure');
     }
