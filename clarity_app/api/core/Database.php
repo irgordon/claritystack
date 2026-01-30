@@ -2,6 +2,7 @@
 class Database {
     private static $instance = null;
     private $configFile = __DIR__ . '/../config/env.php';
+    private $injectedConfig = null;
     public $conn;
 
     private function __construct() {}
@@ -13,6 +14,13 @@ class Database {
             self::$instance = new self();
         }
         return self::$instance;
+    }
+
+    public function setConfig(array $config) {
+        $this->injectedConfig = $config;
+        if ($this->conn !== null) {
+            $this->conn = null;
+        }
     }
 
     public function connect() {
@@ -30,10 +38,20 @@ class Database {
         }
 
         // 2. Load Config
-        $config = require $this->configFile;
+        if ($this->injectedConfig !== null) {
+            $config = $this->injectedConfig;
+        } else {
+            $config = require $this->configFile;
+        }
 
         try {
-            $dsn = "pgsql:host=" . $config['DB_HOST'] . ";dbname=" . $config['DB_NAME'];
+            $driver = $config['DB_DRIVER'] ?? 'pgsql';
+            if ($driver === 'sqlite') {
+                $dsn = "sqlite:" . $config['DB_NAME'];
+            } else {
+                $dsn = "pgsql:host=" . $config['DB_HOST'] . ";dbname=" . $config['DB_NAME'];
+            }
+
             $this->conn = new PDO($dsn, $config['DB_USER'], $config['DB_PASS']);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
