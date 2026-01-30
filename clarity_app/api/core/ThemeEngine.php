@@ -6,6 +6,7 @@ class ThemeEngine {
     private $themePath;
     private $publicUrl;
     private $db;
+    private $dom;
     
     // Safety Limits
     private const MAX_RECURSION_DEPTH = 10;
@@ -141,11 +142,14 @@ class ThemeEngine {
         // Suppress parsing errors for invalid HTML
         libxml_use_internal_errors(true);
 
-        $dom = new DOMDocument();
-        // Load HTML with UTF-8 fix
-        $dom->loadHTML(mb_convert_encoding("<div>$dirtyHtml</div>", 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        if ($this->dom === null) {
+            $this->dom = new DOMDocument();
+        }
 
-        $xpath = new DOMXPath($dom);
+        // Load HTML with UTF-8 fix
+        $this->dom->loadHTML(mb_convert_encoding("<div>$dirtyHtml</div>", 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+        $xpath = new DOMXPath($this->dom);
 
         // 1. Remove Disallowed Tags (Script, Object, Iframe, Style, etc.)
         // We select ALL elements and remove those not in our allowed list
@@ -177,7 +181,7 @@ class ThemeEngine {
         }
 
         // Save sanitized HTML (strip the wrapper div we added)
-        $cleanHtml = $dom->saveHTML($dom->documentElement);
+        $cleanHtml = $this->dom->saveHTML($this->dom->documentElement);
         $cleanHtml = substr($cleanHtml, 5, -6); // Remove <div> and </div>
 
         libxml_clear_errors();

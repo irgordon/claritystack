@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-01-30
+
 ### Performance
+- **ThemeEngine**: Optimized `purifyHtml` to reuse `DOMDocument` instances, significantly reducing object allocation overhead during recursive block rendering.
 - **FileController**: Added 'Cache-Control' headers to image responses to improve load times and reduce bandwidth.
 - **ConfigHelper**: Implemented request-lifecycle caching for `getTimeout()` to eliminate repeated database queries, reducing overhead by ~99% for multiple calls.
 
