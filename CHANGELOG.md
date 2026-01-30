@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-02-04
+
+### Fixed
+- **Installer Reliability**: Added comprehensive environment sanity checks (PHP version, extensions, permissions) to the installer to fail fast if requirements are not met.
+- **Data Integrity**: Wrapped the installation process in a database transaction to ensure atomicity; failures during installation now cleanly rollback any partial database changes.
+
 ## [1.0.5] - 2026-02-03
 
 ### Performance
