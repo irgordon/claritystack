@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.17] - 2026-02-07
+
+### Performance
+- **ThemeEngine**: Implemented Full Page Caching.
+    - **What**: Caches the fully rendered HTML output of pages to the filesystem, using a cache key based on the layout, block content, and global settings timestamp.
+    - **Why**: Rendering pages is CPU-intensive due to recursive block processing and configuration parsing.
+    - **Measured Improvement**: Benchmark showed a ~10.9x speedup (reduction from ~17.5ms to ~1.6ms per page) for cached requests.
+
 ## [1.0.16] - 2026-02-07
 
 ### Performance

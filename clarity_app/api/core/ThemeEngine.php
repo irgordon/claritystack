@@ -32,8 +32,30 @@ class ThemeEngine {
             }
 
             // Fetch Global Settings
-            $stmt = $this->db->query("SELECT business_name, public_config FROM settings LIMIT 1");
+            $stmt = $this->db->query("SELECT business_name, public_config, updated_at FROM settings LIMIT 1");
             $settingsRow = $stmt->fetch();
+
+            // PERFORMANCE: Full Page Caching
+            // Cache Key Factors:
+            // 1. Layout Slug (which layout is requested)
+            // 2. Content Tree (what content is being rendered)
+            // 3. Settings Updated Timestamp (global config changes)
+            // 4. Layout File MTime (template code changes)
+            $layoutMtime = file_exists($layoutPath) ? filemtime($layoutPath) : 0;
+            $settingsUpdatedAt = $settingsRow['updated_at'] ?? '0';
+
+            $cacheKey = md5($layoutSlug . serialize($blocksTree) . $settingsUpdatedAt . $layoutMtime);
+
+            $cacheDir = sys_get_temp_dir() . '/clarity_page_cache';
+            if (!is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+
+            $cacheFile = $cacheDir . '/' . $cacheKey . '.html';
+
+            if (file_exists($cacheFile)) {
+                return file_get_contents($cacheFile);
+            }
             
             $globalConfig = [];
             if ($settingsRow) {
@@ -60,7 +82,19 @@ class ThemeEngine {
             include $layoutPath;
             $fullHtml = ob_get_clean();
 
-            return $this->parseShortcodes($fullHtml);
+            $finalHtml = $this->parseShortcodes($fullHtml);
+
+            // Save to Cache (Atomic Write)
+            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+                $tempFile = tempnam($cacheDir, 'tmp_');
+                if ($tempFile !== false) {
+                    file_put_contents($tempFile, $finalHtml);
+                    @rename($tempFile, $cacheFile);
+                    @chmod($cacheFile, 0644);
+                }
+            }
+
+            return $finalHtml;
 
         } catch (Exception $e) {
             $this->logAndNotify('critical', 'Page Rendering Failed', ['error' => $e->getMessage()]);
