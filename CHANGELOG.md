@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.31] - 2026-02-08
+
+### Performance
+- **FileController**: Implemented early session lock release (`session_write_close`).
+    - **What**: Added `session_write_close()` immediately after authenticating the user in `view` method.
+    - **Why**: PHP's default session handler locks the session file for the duration of the script execution, preventing concurrent requests from the same user (e.g., parallel image downloads) from being processed in parallel.
+    - **Measured Improvement**: Benchmark showed that concurrent requests, which previously blocked each other (Total time ~2.04s for two 1s tasks), now run in parallel (Total time ~1.04s), effectively doubling throughput for concurrent file downloads.
+
 ## [1.0.30] - 2026-02-08
 
 ### Added
