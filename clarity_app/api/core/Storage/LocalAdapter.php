@@ -8,11 +8,6 @@ class LocalAdapter implements StorageInterface {
 
     public function __construct(string $rootPath) {
         $this->rootPath = rtrim($rootPath, '/');
-        // Ensure directory exists
-        if (!is_dir($this->rootPath)) {
-            // Check if we can create it (might fail if parent doesn't exist or permissions)
-            @mkdir($this->rootPath, 0755, true);
-        }
     }
 
     public function put(string $sourceFile, string $destinationPath): bool {
