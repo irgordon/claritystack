@@ -90,6 +90,8 @@ export default function ProjectGallery() {
         loadPhotos(page);
     }, [page, loadPhotos]);
 
+    const itemData = useMemo(() => ({ chunks: photos, chunkOffsets, totalCount }), [photos, chunkOffsets, totalCount]);
+
     const download = async () => {
         const res = await secureFetch(`/api/projects/${id}/download/generate`, { method: 'POST' });
         window.location.href = res.url;
@@ -115,7 +117,7 @@ export default function ProjectGallery() {
                                 rowCount={rowCount}
                                 rowHeight={columnWidth}
                                 width={width}
-                                itemData={{ chunks: photos, chunkOffsets, totalCount }}
+                                itemData={itemData}
                                 onItemsRendered={({ visibleRowStopIndex }) => {
                                     if (visibleRowStopIndex >= rowCount - 2 && !loadingRef.current && totalCount > 0) {
                                          loadingRef.current = true;
