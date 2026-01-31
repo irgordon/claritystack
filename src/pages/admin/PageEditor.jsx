@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { secureFetch } from '../../utils/apiClient';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 
+const generateId = () => window.crypto?.randomUUID() || Math.random().toString(36).substr(2, 9);
+
+const arePropsEqual = (prevProps, nextProps) => {
+    // Standard reference checks
+    if (prevProps.node !== nextProps.node) return false;
+    if (prevProps.index !== nextProps.index) return false;
+    if (prevProps.onAddChild !== nextProps.onAddChild) return false;
+    if (prevProps.onDelete !== nextProps.onDelete) return false;
+    if (prevProps.availableBlocks !== nextProps.availableBlocks) return false;
+
+    // Path array comparison (value equality)
+    if (prevProps.path.length !== nextProps.path.length) return false;
+    for (let i = 0; i < prevProps.path.length; i++) {
+        if (prevProps.path[i] !== nextProps.path[i]) return false;
+    }
+
+    return true;
+};
+
 // Recursive Block Node Component
-const BlockNode = ({ node, index, path, onAddChild, onDelete, availableBlocks }) => {
+const BlockNode = memo(({ node, index, path, onAddChild, onDelete, availableBlocks }) => {
     const blockDef = availableBlocks.find(b => b.type === node.type);
     const canNest = blockDef?.allows_nesting;
 
@@ -61,7 +80,7 @@ const BlockNode = ({ node, index, path, onAddChild, onDelete, availableBlocks })
             </div>
         </div>
     );
-};
+}, arePropsEqual);
 
 export default function PageEditor() {
     const [tree, setTree] = useState([]);
@@ -86,10 +105,8 @@ export default function PageEditor() {
             });
     }, []);
 
-    const generateId = () => window.crypto?.randomUUID() || Math.random().toString(36).substr(2, 9);
-
+    // Helper to clone and traverse
     const updateTree = (currentTree, path, action) => {
-        // Helper to clone and traverse
         if (path.length === 0) {
             return action(currentTree);
         }
@@ -103,16 +120,6 @@ export default function PageEditor() {
             };
             return newTree;
         }
-        // If head is string (key), e.g. 'children'
-        // But path is constructed as [index, 'children', index...]
-        // So actually, my recursion above expects the array logic.
-
-        // Let's rethink the path structure from BlockNode:
-        // Root calls: path=[]
-        // Child calls: path=[index, 'children']
-
-        // Wait, the path passed to onAddChild is [...path, index, 'children'].
-        // So for root node 0, adding child: path=[0, 'children'].
 
         const index = head;
         const key = tail[0]; // 'children'
@@ -129,7 +136,7 @@ export default function PageEditor() {
         }
     };
 
-    const handleAddBlock = (path, type) => {
+    const handleAddBlock = useCallback((path, type) => {
         const newBlock = { id: generateId(), type, props: {}, children: [] };
 
         if (path.length === 0) {
@@ -154,9 +161,9 @@ export default function PageEditor() {
             };
             return deepUpdate(prev, path);
         });
-    };
+    }, []); // Empty dependency array as it uses functional state update
 
-    const handleDelete = (path, index) => {
+    const handleDelete = useCallback((path, index) => {
          // Logic to delete node at index in path
          // If path is [], delete tree[index]
          if (path.length === 0) {
@@ -181,7 +188,7 @@ export default function PageEditor() {
             };
             return deepDelete(prev, path);
          });
-    };
+    }, []); // Empty dependency array as it uses functional state update
 
     return (
         <div className="flex h-[calc(100vh-64px)] -m-8">
