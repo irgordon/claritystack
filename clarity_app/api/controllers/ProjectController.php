@@ -22,7 +22,8 @@ class ProjectController {
         // Verify if user is admin or the project owner
         $authStmt = $this->db->prepare("
             SELECT u.role, u.email as user_email, p.client_email
-            FROM users u, projects p
+            FROM users u
+            CROSS JOIN projects p
             WHERE u.id = ? AND p.id = ?
         ");
         $authStmt->execute([$userId, $projectId]);
