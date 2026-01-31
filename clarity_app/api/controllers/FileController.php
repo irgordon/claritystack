@@ -3,8 +3,10 @@ require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/ConfigHelper.php';
 require_once __DIR__ . '/../core/Storage/StorageFactory.php';
 require_once __DIR__ . '/../core/Security.php';
+require_once __DIR__ . '/../core/Logger.php';
 
 use Core\Storage\StorageFactory;
+use Core\Logger;
 
 class FileController {
     private $db;
@@ -74,6 +76,15 @@ class FileController {
         
         header("Content-Type: " . ($isThumb ? 'image/jpeg' : $photo['mime_type']));
         header('Cache-Control: max-age=86400');
+
+        // Audit Storage Access
+        Logger::info("Storage Access: {$photoId}", [
+            'category' => 'storage',
+            'file_id' => $photoId,
+            'user_id' => $userId,
+            'is_thumb' => $isThumb
+        ]);
+
         $this->storage->output($path);
     }
 }

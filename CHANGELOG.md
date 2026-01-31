@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.30] - 2026-02-08
+
+### Added
+- **Admin Dashboard**: Launched a new Admin Dashboard with deeper auditing and telemetry.
+    - **What**: Added System Health card (Server/DB Env), Log Viewer, and Visitor Traffic widgets.
+    - **Why**: To provide administrators with real-time visibility into system performance and client activity.
+    - **How**: Created `Dashboard.jsx`, `Logger.php`, and `SettingsController` endpoints.
+- **Logging & Auditing**: Implemented a robust logging infrastructure.
+    - **What**: Created `Core\Logger` for JSON-based file logging and added client-side telemetry (traffic/errors) logging via `/api/log/client`.
+    - **Why**: To capture critical system events and client-side issues for auditing and debugging.
+- **Maintenance Scripts**: Added automated log rotation and weekly email reports.
+    - **What**: Created `maintenance.php` to rotate logs by size and send weekly executive summaries of system health (frictionless, non-technical).
+    - **Why**: To prevent log files from consuming all disk space and to keep administrators informed without requiring manual checks.
+
 ## [1.0.29] - 2026-02-08
 
 ### Performance

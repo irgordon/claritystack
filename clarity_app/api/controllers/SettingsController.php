@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/Security.php';
 require_once __DIR__ . '/../core/ConfigHelper.php';
+require_once __DIR__ . '/../core/Logger.php';
 
 use Core\Security;
+use Core\Logger;
 
 class SettingsController {
     private $db;
@@ -100,6 +102,112 @@ class SettingsController {
             http_response_code(500);
             echo json_encode(['error' => 'Failed to save settings to database.']);
         }
+    }
+
+    private function verifyAdminSession() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $stmt = $this->db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $role = $stmt->fetchColumn();
+
+        if ($role !== 'admin') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            exit;
+        }
+    }
+
+    /**
+     * GET /api/admin/health
+     */
+    public function getSystemHealth() {
+        $this->verifyAdminSession();
+
+        $db = $this->db;
+        $dbDriver = 'Unknown';
+        $dbVersion = 'Unknown';
+        try {
+            $dbDriver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+            $dbVersion = $db->getAttribute(PDO::ATTR_SERVER_VERSION);
+        } catch (Exception $e) {}
+
+        $health = [
+            'server' => [
+                'php_version' => PHP_VERSION,
+                'software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+                'os' => PHP_OS,
+                'disk_free' => disk_free_space(__DIR__),
+                'disk_total' => disk_total_space(__DIR__),
+                'memory_limit' => ini_get('memory_limit'),
+                'upload_max_filesize' => ini_get('upload_max_filesize'),
+            ],
+            'database' => [
+                'driver' => $dbDriver,
+                'version' => $dbVersion,
+            ],
+            'env' => [
+                'DB_DRIVER' => getenv('DB_DRIVER') ?: 'N/A',
+                'APP_ENV' => getenv('APP_ENV') ?: 'production',
+            ]
+        ];
+        echo json_encode($health);
+    }
+
+    /**
+     * GET /api/admin/logs
+     */
+    public function getLogs() {
+        $this->verifyAdminSession();
+
+        $logFile = __DIR__ . '/../../logs/clarity.log';
+        if (!file_exists($logFile)) {
+            echo json_encode([]);
+            return;
+        }
+
+        $lines = file($logFile);
+        $lastLines = array_slice($lines, -50);
+        $logs = [];
+        foreach ($lastLines as $line) {
+            $decoded = json_decode($line, true);
+            if ($decoded) {
+                $logs[] = $decoded;
+            }
+        }
+        echo json_encode(array_reverse($logs));
+    }
+
+    /**
+     * POST /api/log/client
+     */
+    public function logClientEvent() {
+        // Public endpoint, use Rate Limiter
+        require_once __DIR__ . '/../core/RateLimiter.php';
+        if (!\Core\RateLimiter::check($_SERVER['REMOTE_ADDR'], 60, 60)) {
+             http_response_code(429);
+             exit;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        $level = $input['level'] ?? 'INFO';
+        $message = $input['message'] ?? 'Client Event';
+        $context = $input['context'] ?? [];
+
+        $category = $input['category'] ?? 'client';
+        $context['category'] = $category;
+
+        Logger::log($level, $message, $context);
+
+        echo json_encode(['status' => 'logged']);
     }
 }
 ?>
