@@ -1,23 +1,16 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Layouts
 import AdminLayout from './components/layout/AdminLayout';
 import ClientLayout from './components/layout/ClientLayout';
 
 // Pages
+import Dashboard from './pages/admin/Dashboard';
 import SettingsStorage from './pages/admin/SettingsStorage';
 import PageEditor from './pages/admin/PageEditor';
 import ProjectGallery from './pages/client/ProjectGallery';
 import Installer from './pages/Installer';
-
-// Placeholder for Dashboard
-const AdminDashboard = () => (
-  <div className="bg-white p-8 rounded shadow">
-    <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-    <p>Welcome to the Clarity Admin Panel.</p>
-  </div>
-);
 
 // Placeholder for Client Projects List
 const ClientProjects = () => (
@@ -28,6 +21,29 @@ const ClientProjects = () => (
 );
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const logVisit = async () => {
+      try {
+        await fetch('/api/log/client', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            level: 'INFO',
+            message: `Visit: ${window.location.pathname}`,
+            category: 'traffic',
+            context: {
+              ua: navigator.userAgent,
+              referrer: document.referrer
+            }
+          })
+        });
+      } catch(e) { /* ignore */ }
+    };
+    logVisit();
+  }, [location]);
+
   return (
     <Routes>
       {/* Installer Route - No Layout */}
@@ -38,7 +54,7 @@ export default function App() {
       <Route path="/admin/*" element={
         <AdminLayout>
           <Routes>
-            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="settings/storage" element={<SettingsStorage />} />
             <Route path="pages" element={<PageEditor />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
