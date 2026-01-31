@@ -14,8 +14,10 @@ class RateLimiter {
                 // Check if file is missing or empty (handling race where PDO creates 0-byte file)
                 $initialize = !file_exists($file) || @filesize($file) === 0;
 
-                self::$pdo = new PDO("sqlite:$file");
-                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                self::$pdo = new PDO("sqlite:$file", null, null, [
+                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                ]);
 
                 if ($initialize) {
                     // create table if not exists

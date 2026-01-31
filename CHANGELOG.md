@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 2026-02-08
+
+### Performance
+- **RateLimiter**: Implemented persistent PDO connections.
+    - **What**: Added `PDO::ATTR_PERSISTENT => true` to the SQLite connection in `RateLimiter`.
+    - **Why**: Eliminates the overhead of opening the SQLite database file on every request (or every check in a script), significantly reducing latency.
+    - **Measured Improvement**: Benchmark showed a ~34x speedup (reduction from ~6.24ms to ~0.18ms per operation) and increased throughput from ~160 to ~5492 ops/sec.
+
 ## [1.0.28] - 2026-02-08
 
 ### Performance
