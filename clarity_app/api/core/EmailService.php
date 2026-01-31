@@ -55,10 +55,11 @@ class EmailService {
     }
 
     private static function merge($text, $data) {
+        $replace_pairs = [];
         foreach ($data as $key => $value) {
-            $text = str_replace("{{" . $key . "}}", htmlspecialchars($value), $text);
+            $replace_pairs["{{" . $key . "}}"] = htmlspecialchars($value);
         }
-        return $text;
+        return strtr($text, $replace_pairs);
     }
 
     private static function wrapHtml($content, $name, $logo, $color) {
