@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/Security.php';
+require_once __DIR__ . '/../core/ConfigHelper.php';
 
 use Core\Security;
 
@@ -93,6 +94,7 @@ class SettingsController {
         ]);
 
         if ($success) {
+            ConfigHelper::clearCache();
             echo json_encode(['status' => 'success', 'message' => 'Storage configuration updated successfully.']);
         } else {
             http_response_code(500);
