@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Layouts
@@ -22,26 +22,41 @@ const ClientProjects = () => (
 
 export default function App() {
   const location = useLocation();
+  const logQueue = useRef([]);
+  const flushTimeout = useRef(null);
 
   useEffect(() => {
-    const logVisit = async () => {
+    const flushLogs = async () => {
+      if (logQueue.current.length === 0) return;
+
+      const batch = [...logQueue.current];
+      logQueue.current = [];
+      flushTimeout.current = null;
+
       try {
         await fetch('/api/log/client', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            level: 'INFO',
-            message: `Visit: ${window.location.pathname}`,
-            category: 'traffic',
-            context: {
-              ua: navigator.userAgent,
-              referrer: document.referrer
-            }
-          })
+          body: JSON.stringify(batch)
         });
       } catch(e) { /* ignore */ }
     };
-    logVisit();
+
+    // Queue the log
+    logQueue.current.push({
+      level: 'INFO',
+      message: `Visit: ${window.location.pathname}`,
+      category: 'traffic',
+      context: {
+        ua: navigator.userAgent,
+        referrer: document.referrer
+      }
+    });
+
+    // Schedule flush if not active
+    if (!flushTimeout.current) {
+      flushTimeout.current = setTimeout(flushLogs, 2000);
+    }
   }, [location]);
 
   return (
