@@ -34,6 +34,9 @@ setup_db($dbFile);
 
 putenv("CLARITY_TEST_DB=$dbFile");
 
+// process_email_queue.php handles SQLite compatibility natively when CLARITY_TEST_DB is set.
+// It automatically adjusts SQL for SQLite (no 'FOR UPDATE SKIP LOCKED', uses 'datetime('now')').
+
 $start = microtime(true);
 system("php " . escapeshellarg($originalFile));
 $end = microtime(true);
