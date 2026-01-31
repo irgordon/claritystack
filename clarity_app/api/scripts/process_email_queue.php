@@ -37,6 +37,8 @@ try {
     echo "Found " . count($emails) . " emails to process.\n";
 
     // Process sequentially (Optimization: Removed forking to save memory)
+    $stmt = $db->prepare("UPDATE email_queue SET status = ?, updated_at = $nowFn WHERE id = ?");
+
     foreach ($emails as $email) {
         try {
             echo "Processing email ID: {$email['id']}... ";
@@ -47,7 +49,6 @@ try {
             $status = $sent ? 'sent' : 'failed';
             $msg = $sent ? "Sent.\n" : "Failed (Check mail configuration).\n";
 
-            $stmt = $db->prepare("UPDATE email_queue SET status = ?, updated_at = $nowFn WHERE id = ?");
             $stmt->execute([$status, $email['id']]);
             echo $msg;
 
