@@ -80,13 +80,15 @@ class FileController {
         header("Content-Type: " . ($isThumb ? 'image/jpeg' : $photo['mime_type']));
         header('Cache-Control: max-age=86400');
 
-        // Audit Storage Access
-        Logger::info("Storage Access: {$photoId}", [
-            'category' => 'storage',
-            'file_id' => $photoId,
-            'user_id' => $userId,
-            'is_thumb' => $isThumb
-        ]);
+        // Audit Storage Access (Sampled 1% to reduce I/O)
+        if (mt_rand(1, 100) === 1) {
+            Logger::info("Storage Access: {$photoId}", [
+                'category' => 'storage',
+                'file_id' => $photoId,
+                'user_id' => $userId,
+                'is_thumb' => $isThumb
+            ]);
+        }
 
         $this->storage->output($path);
     }
