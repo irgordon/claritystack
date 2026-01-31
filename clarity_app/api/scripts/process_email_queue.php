@@ -1,6 +1,16 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
 
+// Allow injecting test configuration via environment variable
+if ($testDb = getenv('CLARITY_TEST_DB')) {
+    Database::getInstance()->setConfig([
+        'DB_DRIVER' => 'sqlite',
+        'DB_NAME' => $testDb,
+        'DB_USER' => null,
+        'DB_PASS' => null
+    ]);
+}
+
 echo "Starting Email Queue Processor...\n";
 
 try {
