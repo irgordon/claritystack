@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* CLARITYSTACK BRANDING ENGINE
   These variables are updated at runtime by src/context/BrandingContext.jsx
