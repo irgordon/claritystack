@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
-require_once __DIR__ . '/../core/Storage/LocalAdapter.php';
+require_once __DIR__ . '/../core/ConfigHelper.php';
+require_once __DIR__ . '/../core/Storage/StorageFactory.php';
+
+use Core\Storage\StorageFactory;
 
 class FileController {
     private $db;
@@ -8,8 +11,10 @@ class FileController {
 
     public function __construct() {
         $this->db = \Database::getInstance()->connect();
-        // Path to storage outside webroot
-        $this->storage = new \Core\Storage\LocalAdapter('/home/clarity_user/storage_secure');
+
+        // Dynamic Storage Configuration
+        $config = \ConfigHelper::getStorageConfig();
+        $this->storage = StorageFactory::create($config);
     }
 
     public function view($photoId) {
