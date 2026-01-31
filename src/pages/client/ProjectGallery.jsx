@@ -5,41 +5,13 @@ import { FixedSizeGrid as Grid } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import Button from '../../components/ui/Button';
 
-// Helper to retrieve item by global index from chunked arrays
-const getItem = (index, chunks, offsets) => {
-    // Binary search for the chunk index
-    let low = 0;
-    let high = offsets.length - 1;
-    let chunkIndex = -1;
-
-    while (low <= high) {
-        const mid = (low + high) >>> 1;
-        if (offsets[mid] <= index) {
-            chunkIndex = mid;
-            low = mid + 1;
-        } else {
-            high = mid - 1;
-        }
-    }
-
-    if (chunkIndex === -1 || chunkIndex >= chunks.length) return undefined;
-
-    const offset = offsets[chunkIndex];
-    const localIndex = index - offset;
-    const chunk = chunks[chunkIndex];
-
-    if (localIndex >= chunk.length) return undefined;
-
-    return chunk[localIndex];
-};
-
 const Cell = ({ columnIndex, rowIndex, style, data }) => {
-    const { chunks, chunkOffsets, totalCount, columnCount } = data;
+    const { photos, columnCount } = data;
     const index = rowIndex * columnCount + columnIndex;
 
-    if (index >= totalCount) return null;
+    if (index >= photos.length) return null;
 
-    const photo = getItem(index, chunks, chunkOffsets);
+    const photo = photos[index];
     if (!photo) return null;
 
     return (
@@ -71,20 +43,9 @@ const Cell = ({ columnIndex, rowIndex, style, data }) => {
 
 export default function ProjectGallery() {
     const { id } = useParams();
-    const [photos, setPhotos] = useState([]); // Array of arrays
+    const [photos, setPhotos] = useState([]); // Flat array of photos
     const [page, setPage] = useState(1);
     const loadingRef = useRef(false);
-
-    // Calculate metadata efficiently
-    const { chunkOffsets, totalCount } = useMemo(() => {
-        const offsets = [];
-        let total = 0;
-        for (const chunk of photos) {
-            offsets.push(total);
-            total += chunk.length;
-        }
-        return { chunkOffsets: offsets, totalCount: total };
-    }, [photos]);
 
     const loadPhotos = useCallback(async (p) => {
         loadingRef.current = true;
@@ -92,7 +53,7 @@ export default function ProjectGallery() {
         try {
             const res = await secureFetch(`/api/projects/${id}/photos?page=${p}`);
             if (res.data && Array.isArray(res.data)) {
-                 setPhotos(prev => [...prev, res.data]);
+                 setPhotos(prev => [...prev, ...res.data]);
             }
         } catch (e) {
             console.error(e);
@@ -144,10 +105,10 @@ export default function ProjectGallery() {
                         // Responsive column count
                         const columnCount = width < 640 ? 2 : width < 1024 ? 3 : 4;
                         const columnWidth = width / columnCount;
-                        const rowCount = Math.ceil(totalCount / columnCount);
+                        const rowCount = Math.ceil(photos.length / columnCount);
 
                         // Pass columnCount to itemData so Cell can calculate index
-                        const itemData = { chunks: photos, chunkOffsets, totalCount, columnCount };
+                        const itemData = { photos, columnCount };
 
                         return (
                             <Grid
@@ -159,7 +120,7 @@ export default function ProjectGallery() {
                                 width={width}
                                 itemData={itemData}
                                 onItemsRendered={({ visibleRowStopIndex }) => {
-                                    if (visibleRowStopIndex >= rowCount - 2 && !loadingRef.current && totalCount > 0) {
+                                    if (visibleRowStopIndex >= rowCount - 2 && !loadingRef.current && photos.length > 0) {
                                          loadingRef.current = true;
                                          setPage(prev => prev + 1);
                                     }
