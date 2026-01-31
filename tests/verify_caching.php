@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../clarity_app/api/core/ThemeEngine.php';
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
+require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
+
+// Clear Config Cache to ensure test isolation
+ConfigHelper::clearCache();
 
 // Configure Database
 $db = Database::getInstance();
@@ -56,6 +60,9 @@ if ($output2 === "CACHED_CONTENT_MARKER") {
 echo "3. Updating settings to invalidate cache...\n";
 $newTime = '2023-01-02 12:00:00';
 $conn->exec("UPDATE settings SET updated_at = '$newTime'");
+
+// Simulate what SettingsController would do: Clear ConfigHelper cache so it picks up the change
+ConfigHelper::clearCache();
 
 $output3 = $engine->renderPage($layoutSlug, $blocksTree);
 // Should not be the cached marker
