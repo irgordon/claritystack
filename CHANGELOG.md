@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] - 2026-02-07
+
+### Performance
+- **ThemeEngine**: Implemented caching for `purifyHtml` results.
+    - **What**: Added an in-memory cache keyed by the MD5 hash of the input HTML to store sanitized results.
+    - **Why**: `purifyHtml` uses `DOMDocument::loadHTML`, which is expensive when processing the same content repeatedly.
+    - **Measured Improvement**: Benchmark showed a ~3x speedup (reduction from ~0.39s to ~0.13s for 5000 iterations) for repeated content.
+
 ## [1.0.17] - 2026-02-07
 
 ### Performance
