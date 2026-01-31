@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.24] - 2026-02-08
+
+### Added
+- **UI Components**: Introduced a comprehensive UI kit (`Button`, `Card`, `Input`, `Badge`) in `src/components/ui` to standardize the application design.
+- **Layouts**: Added `AdminLayout` and `ClientLayout` to provide consistent navigation and branding across the portal.
+- **Routing**: Implemented `App.jsx` to handle client-side routing and layout wrapping.
+
+### Changed
+- **PageEditor**: Refactored the Page Builder into a modern 2-column interface with a sidebar for blocks and a visual tree editor.
+- **SettingsStorage**: Overhauled the Storage Settings page to use card-based layouts and improved form interactions.
+- **Installer**: Redesigned the installation process as a multi-step wizard with validation and progress tracking.
+- **ProjectGallery**: Enhanced the client photo gallery with a responsive grid, hover actions, and a proper header.
+- **Styling**: Updated `tailwind.config.js` and `index.css` to include new animations (`fade-in`), custom scrollbars, and refined typography.
+
 ## [1.0.23] - 2026-02-07
 
 ### Performance

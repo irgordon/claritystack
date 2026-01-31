@@ -1,6 +1,6 @@
 {
   "name": "app",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4.svg) ![React](https://img.shields.io/badge/React-18-61DAFB.svg) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791.svg)",
   "main": "postcss.config.js",
   "directories": {
@@ -23,6 +23,14 @@
     "url": "https://github.com/irgordon/claritystack/issues"
   },
   "homepage": "https://github.com/irgordon/claritystack#readme",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.22.0",
+    "react-virtualized-auto-sizer": "^1.0.24",
+    "react-window": "^1.8.10"
+  },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/forms": "^0.5.11",
