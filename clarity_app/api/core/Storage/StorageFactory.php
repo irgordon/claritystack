@@ -1,6 +1,8 @@
 <?php
 namespace Core\Storage;
 
+require_once __DIR__ . '/LocalAdapter.php';
+
 class StorageFactory {
     public static function create(array $config): StorageInterface {
         $driver = $config['STORAGE_DRIVER'] ?? 'local';

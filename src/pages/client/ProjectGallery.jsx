@@ -46,7 +46,7 @@ const Cell = ({ columnIndex, rowIndex, style, data }) => {
         <div style={style} className="p-2">
             <div className="relative group w-full h-full rounded-lg overflow-hidden shadow-sm bg-gray-100">
                 <img
-                    src={`/api/files/view/${photo.id}?type=thumb`}
+                    src={`/api/files/view/${photo.id}?type=thumb${photo.token ? `&token=${encodeURIComponent(photo.token)}` : ''}`}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                     alt={`Project photo ${photo.id}`}

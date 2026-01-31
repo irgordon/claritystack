@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
+require_once __DIR__ . '/../core/Security.php';
 
 class ProjectController {
     private $db;
@@ -47,14 +48,34 @@ class ProjectController {
         $limit = 50;
         $offset = ($page - 1) * $limit;
 
-        $stmt = $this->db->prepare("SELECT id, thumb_path, original_filename FROM photos WHERE project_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?");
+        $stmt = $this->db->prepare("SELECT id, thumb_path, original_filename, system_filename, mime_type FROM photos WHERE project_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?");
         $stmt->execute([$projectId, $limit, $offset]);
         
+        $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Enhance with signed tokens to bypass DB lookup in FileController
+        foreach ($photos as &$photo) {
+            $payload = [
+                'id' => $photo['id'],
+                's' => $photo['system_filename'],
+                't' => $photo['thumb_path'],
+                'm' => $photo['mime_type'],
+                'u' => $userId,
+                'e' => time() + 7200 // 2 hours expiry
+            ];
+            $photo['token'] = \Core\Security::encrypt(json_encode($payload));
+
+            // Clean up internal paths from response
+            unset($photo['system_filename']);
+            unset($photo['mime_type']);
+        }
+        unset($photo);
+
         $total = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
         $total->execute([$projectId]);
 
         echo json_encode([
-            'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'data' => $photos,
             'meta' => [
                 'current_page' => $page,
                 'total_pages' => ceil($total->fetchColumn() / $limit)

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/ConfigHelper.php';
 require_once __DIR__ . '/../core/Storage/StorageFactory.php';
+require_once __DIR__ . '/../core/Security.php';
 
 use Core\Storage\StorageFactory;
 
@@ -22,24 +23,52 @@ class FileController {
         $userId = $_SESSION['user_id'] ?? null;
         if (!$userId) { http_response_code(401); exit; }
 
-        // 1. Lookup
-        $stmt = $this->db->prepare("
-            SELECT p.system_filename, p.thumb_path, p.mime_type, pr.client_email, u.email as user_email, u.role
-            FROM photos p
-            JOIN projects pr ON p.project_id = pr.id
-            LEFT JOIN users u ON u.id = ?
-            WHERE p.id = ?
-        ");
-        $stmt->execute([$userId, $photoId]);
-        $photo = $stmt->fetch();
+        $photo = null;
+        $isTokenVerified = false;
+
+        // 1. Optimization: Try Token (Signed URL)
+        if (isset($_GET['token'])) {
+            try {
+                $payload = json_decode(\Core\Security::decrypt($_GET['token']), true);
+                if ($payload &&
+                    $payload['u'] == $userId &&
+                    $payload['id'] == $photoId &&
+                    $payload['e'] > time()) {
+
+                    $photo = [
+                        'system_filename' => $payload['s'],
+                        'thumb_path' => $payload['t'],
+                        'mime_type' => $payload['m']
+                    ];
+                    $isTokenVerified = true;
+                }
+            } catch (Exception $e) {
+                // Invalid token, proceed to DB
+            }
+        }
+
+        // 2. Lookup (Fallback)
+        if (!$photo) {
+            $stmt = $this->db->prepare("
+                SELECT p.system_filename, p.thumb_path, p.mime_type, pr.client_email, u.email as user_email, u.role
+                FROM photos p
+                JOIN projects pr ON p.project_id = pr.id
+                LEFT JOIN users u ON u.id = ?
+                WHERE p.id = ?
+            ");
+            $stmt->execute([$userId, $photoId]);
+            $photo = $stmt->fetch();
+        }
 
         if (!$photo) { http_response_code(404); exit; }
 
-        // 2. Gatekeeper (IDOR Protection)
-        $allowed = ($photo['role'] === 'admin') || ($photo['user_email'] === $photo['client_email']);
-        if (!$allowed) { http_response_code(403); exit; }
+        // 3. Gatekeeper (IDOR Protection)
+        if (!$isTokenVerified) {
+            $allowed = ($photo['role'] === 'admin') || ($photo['user_email'] === $photo['client_email']);
+            if (!$allowed) { http_response_code(403); exit; }
+        }
 
-        // 3. Serve
+        // 4. Serve
         $isThumb = (isset($_GET['type']) && $_GET['type'] === 'thumb');
         $path = $isThumb ? $photo['thumb_path'] : $photo['system_filename'];
         
