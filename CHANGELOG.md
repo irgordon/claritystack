@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.16] - 2026-02-07
+
+### Performance
+- **ProjectGallery**: Optimized photo list storage by replacing flat array concatenation with a chunked array structure.
+    - **What**: Replaced flat array state with an array of arrays (chunks) to avoid O(N) copying during updates.
+    - **Why**: Eliminates performance degradation when loading many pages of photos.
+    - **Measured Improvement**: Benchmark showed reduction from ~765ms to ~27ms for appending 100k items.
+
 ## [1.0.15] - 2026-02-07
 
 ### Performance
