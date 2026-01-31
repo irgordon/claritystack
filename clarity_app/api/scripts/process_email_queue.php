@@ -26,7 +26,8 @@ try {
     $db->beginTransaction();
 
     // Fetch pending emails
-    $stmt = $db->query("SELECT id, to_email, subject, body, headers FROM email_queue WHERE status = 'pending' LIMIT 50 $skipLocked");
+    $limit = (int)(getenv('EMAIL_BATCH_LIMIT') ?: 50);
+    $stmt = $db->query("SELECT id, to_email, subject, body, headers FROM email_queue WHERE status = 'pending' LIMIT $limit $skipLocked");
     $emails = $stmt->fetchAll();
 
     if (empty($emails)) {
@@ -47,7 +48,24 @@ try {
     echo "Found " . count($emails) . " emails to process.\n";
 
     // Process sequentially (Optimization: Removed forking to save memory)
-    $stmt = $db->prepare("UPDATE email_queue SET status = ?, updated_at = $nowFn WHERE id = ?");
+    $sentIds = [];
+    $failedIds = [];
+    $batchSize = 10;
+
+    $flushBatch = function() use (&$sentIds, &$failedIds, $db, $nowFn) {
+        if (!empty($sentIds)) {
+            $inQuery = implode(',', array_fill(0, count($sentIds), '?'));
+            $stmt = $db->prepare("UPDATE email_queue SET status = 'sent', updated_at = $nowFn WHERE id IN ($inQuery)");
+            $stmt->execute($sentIds);
+            $sentIds = [];
+        }
+        if (!empty($failedIds)) {
+            $inQuery = implode(',', array_fill(0, count($failedIds), '?'));
+            $stmt = $db->prepare("UPDATE email_queue SET status = 'failed', updated_at = $nowFn WHERE id IN ($inQuery)");
+            $stmt->execute($failedIds);
+            $failedIds = [];
+        }
+    };
 
     foreach ($emails as $email) {
         try {
@@ -56,16 +74,26 @@ try {
             // Use @ to suppress warnings from mail() if sendmail is not configured
             $sent = @mail($email['to_email'], $email['subject'], $email['body'], $email['headers']);
 
-            $status = $sent ? 'sent' : 'failed';
             $msg = $sent ? "Sent.\n" : "Failed (Check mail configuration).\n";
-
-            $stmt->execute([$status, $email['id']]);
             echo $msg;
+
+            if ($sent) {
+                $sentIds[] = $email['id'];
+            } else {
+                $failedIds[] = $email['id'];
+            }
+
+            if (count($sentIds) + count($failedIds) >= $batchSize) {
+                $flushBatch();
+            }
 
         } catch (Exception $e) {
             echo "Error processing email {$email['id']}: " . $e->getMessage() . "\n";
         }
     }
+
+    // Flush remaining
+    $flushBatch();
 
 } catch (Exception $e) {
     // Rollback if we are still in transaction
