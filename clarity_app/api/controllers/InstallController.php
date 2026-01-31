@@ -122,17 +122,22 @@ class InstallController {
 
             // We need to use the newly generated key to encrypt secrets immediately
             // Since we can't easily inject the key into the static Security class without reloading,
-            // we will simulate the encryption here or manually instantiate a helper if preferred.
-            // For simplicity in this script, we assume Core\Security handles its key injection via the Config/Env we just wrote,
-            // but since that file is not "required" by the running script yet, we have to be careful.
+            // we will simulate the encryption here using the generated $appKey.
+            $encrypt = function($data) use ($appKey) {
+                if (empty($data)) return '';
+
+                $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+                $iv = openssl_random_pseudo_bytes($ivLength);
+                $encrypted = openssl_encrypt($data, 'aes-256-cbc', $appKey, 0, $iv);
+                return base64_encode($encrypted . '::' . $iv);
+            };
             
-            // Safer approach for Installer: Store empty encrypted values now, admin updates later via Dashboard.
-            // Or, implement a temporary encryptor using the $appKey we just generated.
+            // Store encrypted values (empty if not provided)
             $privateConfig = json_encode([
-                'stripe_secret' => '', // User must set later or we add simple encryption logic here
-                'smtp_host' => '',
-                'smtp_user' => '',
-                'smtp_pass' => ''
+                'stripe_secret' => $encrypt($input['stripe_secret'] ?? ''),
+                'smtp_host' => $encrypt($input['smtp_host'] ?? ''),
+                'smtp_user' => $encrypt($input['smtp_user'] ?? ''),
+                'smtp_pass' => $encrypt($input['smtp_pass'] ?? '')
             ]);
 
             $stmtSettings = $pdo->prepare("

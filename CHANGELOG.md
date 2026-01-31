@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.38] - 2026-02-09
+
+### Security
+- **Installer**: Implemented temporary encryption for private config values during installation.
+    - **What**: Added an inline encryption helper in `InstallController` using the generated `APP_KEY`.
+    - **Why**: Private configuration values were being initialized as plain text or empty placeholders, requiring manual intervention to secure later.
+    - **How**: Implemented `openssl_encrypt` with AES-256-CBC directly in the installer logic to encrypt values immediately, ensuring consistency with `Core\Security`.
+    - **Measured Improvement**: N/A (Security Compliance).
+
 ## [1.0.37] - 2026-02-09
 
 ### Performance
