@@ -32,5 +32,27 @@ class Logger {
     public static function critical($message, $context = []) {
         self::log('CRITICAL', $message, $context);
     }
+
+    public static function batchLog(array $entries) {
+        $dir = dirname(self::$logFile);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $buffer = '';
+        foreach ($entries as $entry) {
+            $logEntry = [
+                'timestamp' => date('Y-m-d H:i:s'),
+                'level' => strtoupper($entry['level'] ?? 'INFO'),
+                'message' => $entry['message'] ?? '',
+                'context' => $entry['context'] ?? []
+            ];
+            $buffer .= json_encode($logEntry) . PHP_EOL;
+        }
+
+        if ($buffer !== '') {
+            file_put_contents(self::$logFile, $buffer, FILE_APPEND | LOCK_EX);
+        }
+    }
 }
 ?>

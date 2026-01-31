@@ -240,12 +240,32 @@ class SettingsController {
         // Handle Batch (Array) or Single (Object)
         // isset($input[0]) is a simple heuristic for a list of objects
         if (is_array($input) && isset($input[0])) {
+            $batchEntries = [];
             $count = 0;
             foreach ($input as $entry) {
                 // Limit batch size to prevent abuse
                 if ($count++ >= 50) break;
-                $this->processLogEvent($entry);
+
+                if (!is_array($entry)) continue;
+
+                $level = $entry['level'] ?? 'INFO';
+                $message = $entry['message'] ?? 'Client Event';
+                $context = $entry['context'] ?? [];
+
+                $category = $entry['category'] ?? 'client';
+                $context['category'] = $category;
+
+                $batchEntries[] = [
+                    'level' => $level,
+                    'message' => $message,
+                    'context' => $context
+                ];
             }
+
+            if (!empty($batchEntries)) {
+                Logger::batchLog($batchEntries);
+            }
+
             echo json_encode(['status' => 'logged', 'count' => $count]);
         } else {
             $this->processLogEvent($input);
