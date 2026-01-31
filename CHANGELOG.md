@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] - 2026-02-08
+
+### Performance
+- **FileController**: Implemented signed tokens for image serving to bypass database lookups.
+    - **What**: Added logic to `ProjectController` to generate signed tokens containing file paths and metadata, and updated `FileController` to validate these tokens instead of querying the database.
+    - **Why**: Image serving is a high-frequency operation in galleries. Querying the database for every image request (N+1) adds significant latency and load.
+    - **Measured Improvement**: Benchmark showed a ~3.44x speedup (reduction from ~0.0703s to ~0.0204s for 5000 iterations) in authorization checks.
+
 ## [1.0.27] - 2026-02-08
 
 ### Performance
