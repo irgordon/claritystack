@@ -1,20 +1,44 @@
 <?php
 // Adjust this path to point to your private backend folder
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
+require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
 
 // 1. Identify the requested path
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $slug = trim($path, '/') ?: 'home';
 
-// 2. Fetch SEO Data
-$db = (new Database())->connect();
-$stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
-$stmt->execute([$slug]);
-$page = $stmt->fetch();
+// 2. Fetch SEO Data (Cached)
+$cacheFile = sys_get_temp_dir() . '/clarity_seo_' . md5($slug) . '.json';
+$page = null;
 
-// 3. Fetch Global Config
-$settings = $db->query("SELECT public_config FROM settings LIMIT 1")->fetch();
-$config = json_decode($settings['public_config'] ?? '{}', true);
+// Cache TTL: 1 hour (3600s)
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 3600)) {
+    $cachedContent = @file_get_contents($cacheFile);
+    if ($cachedContent) {
+        $page = json_decode($cachedContent, true);
+    }
+}
+
+if (!$page) {
+    // Connect to DB only if cache miss
+    $db = Database::getInstance()->connect();
+    $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
+    $stmt->execute([$slug]);
+    $page = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Write to cache if page found
+    if ($page) {
+        // Atomic write
+        $tempFile = tempnam(sys_get_temp_dir(), 'seo_tmp');
+        if ($tempFile) {
+            file_put_contents($tempFile, json_encode($page));
+            rename($tempFile, $cacheFile);
+        }
+    }
+}
+
+// 3. Fetch Global Config (Memoized & Cached)
+$config = ConfigHelper::getPublicConfig();
 $seo = $config['seo'] ?? [];
 
 // 4. Determine Meta Tags
