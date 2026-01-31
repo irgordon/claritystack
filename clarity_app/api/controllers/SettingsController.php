@@ -174,10 +174,47 @@ class SettingsController {
             return;
         }
 
-        $lines = file($logFile);
-        $lastLines = array_slice($lines, -50);
+        $fp = fopen($logFile, 'r');
+        if (!$fp) {
+            echo json_encode([]);
+            return;
+        }
+
         $logs = [];
+        $chunkSize = 4096;
+        $pos = filesize($logFile);
+        $buffer = '';
+        $lineCount = 0;
+        $maxLines = 50;
+
+        while ($pos > 0 && $lineCount < $maxLines) {
+            $seek = max(0, $pos - $chunkSize);
+            fseek($fp, $seek);
+            $readLen = $pos - $seek;
+            $chunk = fread($fp, $readLen);
+            $buffer = $chunk . $buffer;
+            $pos = $seek;
+
+            // Count newlines
+            $lines = explode("\n", $buffer);
+            $lineCount = count($lines);
+
+            if ($lineCount > $maxLines + 1 || ($pos == 0 && $lineCount >= $maxLines)) {
+                 break;
+            }
+        }
+
+        fclose($fp);
+
+        $lines = explode("\n", $buffer);
+        if (end($lines) === "") {
+            array_pop($lines);
+        }
+
+        $lastLines = array_slice($lines, -$maxLines);
+
         foreach ($lastLines as $line) {
+            if (trim($line) === '') continue;
             $decoded = json_decode($line, true);
             if ($decoded) {
                 $logs[] = $decoded;
