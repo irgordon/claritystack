@@ -11,24 +11,30 @@ class RateLimiter {
         if (self::$pdo === null) {
             try {
                 $file = sys_get_temp_dir() . '/global_ratelimit.sqlite';
+                // Check if file is missing or empty (handling race where PDO creates 0-byte file)
+                $initialize = !file_exists($file) || @filesize($file) === 0;
+
                 self::$pdo = new PDO("sqlite:$file");
                 self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // create table if not exists
-                self::$pdo->exec("CREATE TABLE IF NOT EXISTS rate_limits (
-                    ip TEXT,
-                    timestamp INTEGER
-                )");
+                if ($initialize) {
+                    // create table if not exists
+                    self::$pdo->exec("CREATE TABLE IF NOT EXISTS rate_limits (
+                        ip TEXT,
+                        timestamp INTEGER
+                    )");
 
-                // Indexes for performance
-                // Index for counting attempts by IP in a time window
-                self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_ip_timestamp ON rate_limits(ip, timestamp)");
+                    // Indexes for performance
+                    // Index for counting attempts by IP in a time window
+                    self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_ip_timestamp ON rate_limits(ip, timestamp)");
 
-                // Index for cleanup query (DELETE WHERE timestamp <= ?)
-                self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_timestamp ON rate_limits(timestamp)");
+                    // Index for cleanup query (DELETE WHERE timestamp <= ?)
+                    self::$pdo->exec("CREATE INDEX IF NOT EXISTS idx_timestamp ON rate_limits(timestamp)");
 
-                // Enable WAL mode for better concurrency performance
-                self::$pdo->exec("PRAGMA journal_mode = WAL;");
+                    // Enable WAL mode for better concurrency performance
+                    self::$pdo->exec("PRAGMA journal_mode = WAL;");
+                }
+
                 self::$pdo->exec("PRAGMA synchronous = NORMAL;");
             } catch (Exception $e) {
                 // If DB fails, fail open to avoid blocking users
