@@ -188,8 +188,9 @@ class SettingsController {
 
     /**
      * POST /api/log/client
+     * @param array|null $testInput Optional injected input for testing
      */
-    public function logClientEvent() {
+    public function logClientEvent($testInput = null) {
         // Public endpoint, use Rate Limiter
         require_once __DIR__ . '/../core/RateLimiter.php';
         if (!\Core\RateLimiter::check($_SERVER['REMOTE_ADDR'], 60, 60)) {
@@ -197,7 +198,27 @@ class SettingsController {
              exit;
         }
 
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = $testInput ?? json_decode(file_get_contents('php://input'), true);
+
+        // Handle Batch (Array) or Single (Object)
+        // isset($input[0]) is a simple heuristic for a list of objects
+        if (is_array($input) && isset($input[0])) {
+            $count = 0;
+            foreach ($input as $entry) {
+                // Limit batch size to prevent abuse
+                if ($count++ >= 50) break;
+                $this->processLogEvent($entry);
+            }
+            echo json_encode(['status' => 'logged', 'count' => $count]);
+        } else {
+            $this->processLogEvent($input);
+            echo json_encode(['status' => 'logged']);
+        }
+    }
+
+    private function processLogEvent($input) {
+        if (!is_array($input)) return;
+
         $level = $input['level'] ?? 'INFO';
         $message = $input['message'] ?? 'Client Event';
         $context = $input['context'] ?? [];
@@ -206,8 +227,6 @@ class SettingsController {
         $context['category'] = $category;
 
         Logger::log($level, $message, $context);
-
-        echo json_encode(['status' => 'logged']);
     }
 }
 ?>
