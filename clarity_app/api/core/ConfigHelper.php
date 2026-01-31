@@ -20,7 +20,9 @@ class ConfigHelper {
         $cacheFile = self::getCacheFile();
         if (file_exists($cacheFile)) {
             $data = include $cacheFile;
-            if (is_array($data)) {
+            // Validate structure to ensure we have the new fields (business_name, etc)
+            // If missing, we force a reload.
+            if (is_array($data) && isset($data['public'], $data['private'], $data['business_name'])) {
                 self::$cache = $data;
                 return;
             }
@@ -28,12 +30,15 @@ class ConfigHelper {
 
         try {
             $db = \Database::getInstance()->connect();
-            $stmt = $db->query("SELECT public_config, private_config FROM settings LIMIT 1");
+            // Added business_name and updated_at to the query
+            $stmt = $db->query("SELECT business_name, public_config, private_config, updated_at FROM settings LIMIT 1");
             $row = $stmt->fetch();
 
             self::$cache = [
                 'public' => [],
-                'private' => []
+                'private' => [],
+                'business_name' => '',
+                'updated_at' => '0'
             ];
 
             if ($row) {
@@ -42,6 +47,12 @@ class ConfigHelper {
                 }
                 if (isset($row['private_config'])) {
                     self::$cache['private'] = json_decode($row['private_config'], true) ?? [];
+                }
+                if (isset($row['business_name'])) {
+                    self::$cache['business_name'] = $row['business_name'];
+                }
+                if (isset($row['updated_at'])) {
+                    self::$cache['updated_at'] = $row['updated_at'];
                 }
             }
 
@@ -64,7 +75,7 @@ class ConfigHelper {
         } catch (Exception $e) {
             // Fallback to empty array if DB fails so the app doesn't crash completely
             error_log("ConfigHelper Error: " . $e->getMessage());
-            self::$cache = ['public' => [], 'private' => []];
+            self::$cache = ['public' => [], 'private' => [], 'business_name' => '', 'updated_at' => '0'];
         }
     }
 
@@ -96,6 +107,30 @@ class ConfigHelper {
     public static function get($key, $default = null) {
         self::load();
         return self::$cache['public'][$key] ?? $default;
+    }
+
+    /**
+     * Returns the business name.
+     */
+    public static function getBusinessName() {
+        self::load();
+        return self::$cache['business_name'] ?? '';
+    }
+
+    /**
+     * Returns the settings updated_at timestamp.
+     */
+    public static function getUpdatedAt() {
+        self::load();
+        return self::$cache['updated_at'] ?? '0';
+    }
+
+    /**
+     * Returns the entire public config array.
+     */
+    public static function getPublicConfig() {
+        self::load();
+        return self::$cache['public'] ?? [];
     }
 
     /**

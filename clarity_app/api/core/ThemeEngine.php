@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailService.php';
+require_once __DIR__ . '/ConfigHelper.php';
 
 class ThemeEngine {
     private $themePath;
@@ -32,9 +33,10 @@ class ThemeEngine {
                 throw new Exception("Layout file missing: $layoutSlug");
             }
 
-            // Fetch Global Settings
-            $stmt = $this->db->query("SELECT business_name, public_config, updated_at FROM settings LIMIT 1");
-            $settingsRow = $stmt->fetch();
+            // Fetch Global Settings (via ConfigHelper for Memoization)
+            $businessName = ConfigHelper::getBusinessName();
+            $settingsUpdatedAt = ConfigHelper::getUpdatedAt();
+            $publicConfig = ConfigHelper::getPublicConfig();
 
             // PERFORMANCE: Full Page Caching
             // Cache Key Factors:
@@ -43,7 +45,6 @@ class ThemeEngine {
             // 3. Settings Updated Timestamp (global config changes)
             // 4. Layout File MTime (template code changes)
             $layoutMtime = file_exists($layoutPath) ? filemtime($layoutPath) : 0;
-            $settingsUpdatedAt = $settingsRow['updated_at'] ?? '0';
 
             $cacheKey = md5($layoutSlug . serialize($blocksTree) . $settingsUpdatedAt . $layoutMtime);
 
@@ -58,11 +59,8 @@ class ThemeEngine {
                 return file_get_contents($cacheFile);
             }
             
-            $globalConfig = [];
-            if ($settingsRow) {
-                $globalConfig = json_decode($settingsRow['public_config'] ?? '{}', true);
-                $globalConfig['business_name'] = $settingsRow['business_name'];
-            }
+            $globalConfig = $publicConfig;
+            $globalConfig['business_name'] = $businessName;
             
             // XSS PROTECTION: Sanitize Business Name and Global Config Strings
             foreach ($globalConfig as $key => $val) {
