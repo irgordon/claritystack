@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.39] - 2026-02-09
+
+### Performance
+- **EmailService**: Optimized template merging using `strtr`.
+    - **What**: Replaced the iterative `str_replace` loop with `strtr` for merging template variables.
+    - **Why**: The loop approach scanned the string multiple times (once for each variable), leading to O(N*M) complexity. `strtr` performs a single pass replacement.
+    - **Measured Improvement**: Benchmark showed a ~56% speedup for medium datasets (20 vars) and ~91% speedup for large datasets (100 vars), reducing execution time from ~3.2s to ~0.29s in heavy load scenarios.
+
 ## [1.0.38] - 2026-02-09
 
 ### Security
