@@ -25,6 +25,9 @@ class FileController {
         $userId = $_SESSION['user_id'] ?? null;
         if (!$userId) { http_response_code(401); exit; }
 
+        // Performance Optimization: Release session lock immediately to allow parallel downloads
+        session_write_close();
+
         $photo = null;
         $isTokenVerified = false;
 
