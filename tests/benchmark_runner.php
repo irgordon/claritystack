@@ -26,32 +26,18 @@ function setup_db($dbFile) {
 }
 
 $originalFile = __DIR__ . '/../clarity_app/api/scripts/process_email_queue.php';
-$baselineFile = __DIR__ . '/temp_worker_baseline.php';
 $dbFile = __DIR__ . '/bench_queue.sqlite';
 
 // --- Run Baseline ---
 echo "--- Running Baseline ---\n";
 setup_db($dbFile);
 
-// Read the current file (which I already added sleep to in previous step)
-$content = file_get_contents($originalFile);
-
-// Fix require path
-$content = str_replace("require_once __DIR__ . '/../core/Database.php';",
-    "require_once __DIR__ . '/../clarity_app/api/core/Database.php';\nDatabase::getInstance()->setConfig(['DB_DRIVER'=>'sqlite','DB_NAME'=>'$dbFile']);",
-    $content);
-
-// Fix SQL for SQLite
-$content = str_replace("FOR UPDATE SKIP LOCKED", "", $content);
-$content = str_replace("NOW()", "datetime('now')", $content);
-
-file_put_contents($baselineFile, $content);
+putenv("CLARITY_TEST_DB=$dbFile");
 
 $start = microtime(true);
-system("php $baselineFile");
+system("php " . escapeshellarg($originalFile));
 $end = microtime(true);
 echo "Baseline Time: " . ($end - $start) . "s\n";
 
 // Cleanup
-if (file_exists($baselineFile)) unlink($baselineFile);
 if (file_exists($dbFile)) unlink($dbFile);
