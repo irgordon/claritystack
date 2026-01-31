@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.40] - 2026-02-09
+
+### Security
+- **Encryption**: Upgraded IV generation to use `random_bytes` (CSPRNG).
+    - **What**: Replaced `openssl_random_pseudo_bytes` with `random_bytes` in `Core\Security` and `InstallController`.
+    - **Why**: `openssl_random_pseudo_bytes` relies on OpenSSL's PRNG state, whereas `random_bytes` uses the operating system's CSPRNG directly, offering better theoretical security guarantees.
+    - **How**: Updated the IV generation logic to use the native PHP 8.1+ `random_bytes` function.
+    - **Measured Improvement**: N/A (Cryptographic Best Practice).
+    - **Quote**: "Change is the essential process of all existence." - Spock
+
 ## [1.0.39] - 2026-02-09
 
 ### Performance
