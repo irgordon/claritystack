@@ -13,6 +13,7 @@ class ThemeEngine {
     private $currentDepth = 0;
 
     private $blockFileCache = [];
+    private $purificationCache = [];
 
     // SECURITY: Allowed HTML Tags for CMS Content
     private const ALLOWED_TAGS = ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'img', 'blockquote'];
@@ -187,6 +188,13 @@ class ThemeEngine {
     private function purifyHtml($dirtyHtml) {
         if (empty($dirtyHtml)) return '';
 
+        // PERFORMANCE: Cache purification results to avoid expensive DOM operations
+        // Use MD5 hash of content as key to keep memory usage predictable
+        $cacheKey = md5($dirtyHtml);
+        if (isset($this->purificationCache[$cacheKey])) {
+            return $this->purificationCache[$cacheKey];
+        }
+
         // Suppress parsing errors for invalid HTML
         libxml_use_internal_errors(true);
 
@@ -239,6 +247,10 @@ class ThemeEngine {
         $cleanHtml = substr($cleanHtml, 5, -6); // Remove <div> and </div>
 
         libxml_clear_errors();
+
+        // Cache the result
+        $this->purificationCache[$cacheKey] = $cleanHtml;
+
         return $cleanHtml;
     }
 
