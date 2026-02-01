@@ -33,6 +33,40 @@ class Security {
         return base64_encode($encrypted . '::' . $iv);
     }
 
+    public static function encryptBatch($items) {
+        $results = [];
+        $count = count($items);
+        if ($count === 0) return $results;
+
+        // Performance Optimization: Batch random_bytes generation to reduce syscalls
+        if (extension_loaded('sodium')) {
+            if (self::$sodiumKey === null) {
+                self::$sodiumKey = hash('sha256', self::getKey(), true);
+            }
+
+            $nonceSize = SODIUM_CRYPTO_SECRETBOX_NONCEBYTES;
+            $allNonces = random_bytes($nonceSize * $count);
+
+            foreach ($items as $i => $data) {
+                $nonce = substr($allNonces, $i * $nonceSize, $nonceSize);
+                $ciphertext = sodium_crypto_secretbox($data, $nonce, self::$sodiumKey);
+                $results[] = 'v2:' . base64_encode($nonce . $ciphertext);
+            }
+        } else {
+            $key = self::getKey();
+            $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+            $allIVs = random_bytes($ivLength * $count);
+
+            foreach ($items as $i => $data) {
+                $iv = substr($allIVs, $i * $ivLength, $ivLength);
+                $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
+                $results[] = base64_encode($encrypted . '::' . $iv);
+            }
+        }
+
+        return $results;
+    }
+
     public static function decrypt($data) {
         $key = self::getKey();
         if (!$data) return '';
