@@ -85,7 +85,7 @@ CREATE TABLE photos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_photos_project_id ON photos(project_id);
+CREATE INDEX idx_photos_project_id ON photos(project_id, created_at);
 
 -- 4. CMS & Logs
 CREATE TABLE pages (
