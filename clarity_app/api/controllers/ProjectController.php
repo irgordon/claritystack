@@ -54,16 +54,24 @@ class ProjectController {
         $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Enhance with signed tokens to bypass DB lookup in FileController
-        foreach ($photos as &$photo) {
+        $payloads = [];
+        $expiry = time() + 7200; // 2 hours expiry
+        foreach ($photos as $photo) {
             $payload = [
                 'id' => $photo['id'],
                 's' => $photo['system_filename'],
                 't' => $photo['thumb_path'],
                 'm' => $photo['mime_type'],
                 'u' => $userId,
-                'e' => time() + 7200 // 2 hours expiry
+                'e' => $expiry
             ];
-            $photo['token'] = \Core\Security::encrypt(json_encode($payload));
+            $payloads[] = json_encode($payload);
+        }
+
+        $tokens = \Core\Security::encryptBatch($payloads);
+
+        foreach ($photos as $index => &$photo) {
+            $photo['token'] = $tokens[$index];
 
             // Clean up internal paths from response
             unset($photo['system_filename']);
