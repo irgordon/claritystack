@@ -81,6 +81,8 @@ CREATE TABLE photos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_photos_project_id ON photos(project_id);
+
 -- 4. CMS & Logs
 CREATE TABLE pages (
     id SERIAL PRIMARY KEY,
