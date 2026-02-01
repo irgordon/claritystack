@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.62] - 2026-02-09
+
+### Performance
+- **SettingsStorage**: Suppressed console error logging in production builds.
+    - **What**: Wrapped the `console.error` call in `SettingsStorage.jsx` with `if (import.meta.env.DEV)`.
+    - **Why**: Console errors are noisy in production and can expose stack traces to end-users. The build tool (Vite) can now dead-code eliminate the error handling block.
+    - **Measured Improvement**: Verified complete removal of the explicit logging code from the production bundle using Playwright.
+    - **Quote**: "Make it correct, make it clear, make it concise, make it fast. In that order." - Wes Dyer
+
 ## [1.0.61] - 2026-02-09
 
 ### Performance

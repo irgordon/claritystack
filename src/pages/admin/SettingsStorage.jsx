@@ -63,7 +63,9 @@ export default function SettingsStorage() {
             toast.success("Storage configuration updated successfully");
             setConfig(prev => ({...prev, cloudinary_secret: '', s3_secret: '', imagekit_private: ''}));
         } catch (e) {
-            console.error(e);
+            if (import.meta.env.DEV) {
+                console.error(e);
+            }
             toast.error(e.message || "Failed to save settings");
         }
     };
