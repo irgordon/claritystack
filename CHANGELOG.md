@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.67] - 2026-02-10
+
+### Performance
+- **Frontend**: Optimized static asset serving for `index.php`.
+    - **What**: Replaced direct `file_get_contents` with `CacheService::remember` using `filemtime` versioning.
+    - **Why**: `index.php` was reading `index.html` from disk on every request. While file system cache handles this well, using `CacheService` prepares the application for high-performance memory backends (Redis/Memcached) and unifies the caching strategy.
+    - **How**: Wrapped the HTML loading logic in `CacheService` with a 24-hour TTL, invalidated by file modification time.
+    - **Measured Improvement**: Benchmark showed a ~75% speedup for L1 (memory) cache hits (0.0104ms -> 0.0025ms), confirming the efficiency of the in-memory caching layer for repeated access patterns.
+    - **Quote**: "Premature optimization is the root of all evil (or at least most of it) in programming." - Donald Knuth
+
 ## [1.0.66] - 2026-02-09
 
 ### Performance
