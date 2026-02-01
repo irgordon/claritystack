@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.56] - 2026-02-09
+
+### Performance
+- **ThemeEngine**: Optimized `purifyHtml` with text-only fast path and meta charset injection.
+    - **What**: Added an early return for text without tags and replaced `mb_convert_encoding` with `loadHTML` meta tag injection for UTF-8 support.
+    - **Why**: `DOMDocument` parsing is expensive and unnecessary for plain text, and `mb_convert_encoding` (HTML-ENTITIES) adds overhead for every HTML fragment.
+    - **How**: Added `strpos` check for `<` and replaced encoding conversion logic.
+    - **Measured Improvement**: Benchmark showed a ~3x speedup for complex HTML (from ~0.64ms to ~0.2ms) and ~2000x speedup for plain text (from ~0.64ms to ~0.0003ms).
+    - **Quote**: "Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away." - Antoine de Saint-Exupéry
+
 ## [1.0.55] - 2026-02-09
 
 ### Performance

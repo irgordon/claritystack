@@ -186,6 +186,11 @@ class ThemeEngine {
     private function purifyHtml($dirtyHtml) {
         if (empty($dirtyHtml)) return '';
 
+        // OPTIMIZATION: Skip parsing if no tags are present
+        if (strpos($dirtyHtml, '<') === false) {
+            return $dirtyHtml;
+        }
+
         // PERFORMANCE: Cache purification results to avoid expensive DOM operations
         // Use MD5 hash of content as key to keep memory usage predictable
         // Include allowed tags in key to invalidate if security policy changes
@@ -221,7 +226,14 @@ class ThemeEngine {
         }
 
         // Load HTML with UTF-8 fix
-        $this->dom->loadHTML(mb_convert_encoding("<div>$dirtyHtml</div>", 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        // Optimization: Use meta charset instead of mb_convert_encoding for better performance
+        $this->dom->loadHTML('<div><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' . $dirtyHtml . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+        // Remove the meta tag we added
+        $meta = $this->dom->getElementsByTagName('meta')->item(0);
+        if ($meta) {
+            $meta->parentNode->removeChild($meta);
+        }
 
         // 1. Remove Disallowed Tags (Script, Object, Iframe, Style, etc.)
         // We select ALL elements and remove those not in our allowed list
