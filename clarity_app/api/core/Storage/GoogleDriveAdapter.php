@@ -4,6 +4,7 @@ namespace Core\Storage;
 use Google\Client;
 use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
+use Core\CacheService;
 
 class GoogleDriveAdapter implements StorageInterface {
     private $service;
@@ -84,12 +85,14 @@ class GoogleDriveAdapter implements StorageInterface {
     }
 
     private function findFileIdByName($name) {
-        $optParams = [
-            'q' => "name = '$name' and '{$this->folderId}' in parents and trashed = false",
-            'fields' => 'files(id, name)'
-        ];
-        $results = $this->service->files->listFiles($optParams);
-        if (count($results->getFiles()) == 0) return null;
-        return $results->getFiles()[0]->getId();
+        return CacheService::remember('google_drive_ids', $name, 3600, function() use ($name) {
+            $optParams = [
+                'q' => "name = '$name' and '{$this->folderId}' in parents and trashed = false",
+                'fields' => 'files(id, name)'
+            ];
+            $results = $this->service->files->listFiles($optParams);
+            if (count($results->getFiles()) == 0) return null;
+            return $results->getFiles()[0]->getId();
+        });
     }
 }
