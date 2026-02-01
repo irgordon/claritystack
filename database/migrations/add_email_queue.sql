@@ -8,3 +8,5 @@ CREATE TABLE IF NOT EXISTS email_queue (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
