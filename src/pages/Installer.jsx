@@ -9,6 +9,10 @@ export default function Installer() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({
+    db_host: 'localhost',
+    db_name: 'clarity_db',
+    db_user: 'postgres',
+    db_pass: '',
     business_name: '',
     primary_color: '#3b82f6',
     link_timeout: 10,
@@ -53,16 +57,74 @@ export default function Installer() {
             <Card className="shadow-xl">
                 <div className="flex items-center justify-between mb-6 px-2">
                     <div className="flex items-center">
+                        {/* Step 1 */}
                         <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border-2 ${step >= 1 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-500'}`}>1</div>
-                        <div className={`h-1 w-12 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                        <div className={`h-1 w-6 mx-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+
+                        {/* Step 2 */}
                         <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border-2 ${step >= 2 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-500'}`}>2</div>
+                        <div className={`h-1 w-6 mx-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+
+                        {/* Step 3 */}
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border-2 ${step >= 3 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-500'}`}>3</div>
                     </div>
                     <div className="text-sm font-medium text-gray-500">
-                        Step {step} of 2
+                        Step {step} of 3
                     </div>
                 </div>
 
                 {step === 1 && (
+                    <div className="space-y-4 animate-fade-in">
+                        <div className="text-center mb-6">
+                            <h2 className="text-xl font-bold text-gray-900">Database Connection</h2>
+                            <p className="text-sm text-gray-500">Enter your PostgreSQL credentials.</p>
+                        </div>
+
+                        <Input
+                            label="Database Host"
+                            name="db_host"
+                            value={data.db_host}
+                            onChange={handleChange}
+                            placeholder="localhost"
+                        />
+                        <Input
+                            label="Database Name"
+                            name="db_name"
+                            value={data.db_name}
+                            onChange={handleChange}
+                            placeholder="clarity_db"
+                        />
+                         <Input
+                            label="Database User"
+                            name="db_user"
+                            value={data.db_user}
+                            onChange={handleChange}
+                            placeholder="postgres"
+                        />
+                        <Input
+                            label="Database Password"
+                            name="db_pass"
+                            type="password"
+                            value={data.db_pass}
+                            onChange={handleChange}
+                            placeholder="••••••••"
+                        />
+
+                        <div className="pt-4">
+                            <Button
+                                onClick={() => {
+                                    if(data.db_host && data.db_name && data.db_user) setStep(2);
+                                    else toast.error("Please complete database fields");
+                                }}
+                                className="w-full"
+                            >
+                                Continue
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 2 && (
                     <div className="space-y-4 animate-fade-in">
                         <div className="text-center mb-6">
                             <h2 className="text-xl font-bold text-gray-900">Business Details</h2>
@@ -105,13 +167,14 @@ export default function Installer() {
                             helpText="How long temporary links remain valid."
                         />
 
-                        <div className="pt-4">
+                        <div className="pt-4 flex space-x-3">
+                            <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
                             <Button
                                 onClick={() => {
-                                    if(data.business_name) setStep(2);
+                                    if(data.business_name) setStep(3);
                                     else toast.error("Business Name is required");
                                 }}
-                                className="w-full"
+                                className="flex-1"
                             >
                                 Continue
                             </Button>
@@ -119,7 +182,7 @@ export default function Installer() {
                     </div>
                 )}
 
-                {step === 2 && (
+                {step === 3 && (
                     <div className="space-y-4 animate-fade-in">
                         <div className="text-center mb-6">
                             <h2 className="text-xl font-bold text-gray-900">Admin Account</h2>
@@ -154,7 +217,7 @@ export default function Installer() {
                         />
 
                         <div className="pt-4 flex space-x-3">
-                            <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
+                            <Button variant="outline" onClick={() => setStep(2)} className="flex-1">Back</Button>
                             <Button variant="primary" onClick={install} loading={loading} className="flex-1">Complete Setup</Button>
                         </div>
                     </div>
