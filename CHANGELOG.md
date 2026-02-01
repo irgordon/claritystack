@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.44] - 2026-02-09
+
+### Added
+- **Admin UI**: Redesigned Admin Layout and Dashboard.
+    - **What**: Implemented a modern, clean sidebar with grouped navigation (Studio, Content, System) and a restyled Dashboard with "Stat Cards" and softer aesthetics.
+    - **Why**: To improve usability, visual hierarchy, and match modern design standards as requested.
+    - **How**: Updated `AdminLayout.jsx` and `Dashboard.jsx`, and added placeholder routes for "Projects" and "Clients".
+    - **Measured Improvement**: N/A (UX/UI Improvement).
+
+- **Client UI**: Polished Client Layout and Gallery.
+    - **What**: Added backdrop-blur to the client header and refined the `ProjectGallery` grid with cleaner styling and hover effects.
+    - **Why**: To provide a premium, modern feel for end-users.
+    - **How**: Updated `ClientLayout.jsx` and `ProjectGallery.jsx`.
+
+- **Settings**: Refined Storage Settings UI.
+    - **What**: Renamed "Driver" to "Storage Provider", updated field labels for clarity, and improved tooltips/help text.
+    - **Why**: To make technical settings more accessible and user-friendly.
+    - **How**: Updated `SettingsStorage.jsx`.
+
 ## [1.0.43] - 2026-02-09
 
 ### Performance

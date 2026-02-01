@@ -20,6 +20,18 @@ const ClientProjects = () => (
     </div>
 );
 
+const AdminPlaceholder = ({ title }) => (
+    <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center py-20">
+        <div className="mx-auto h-12 w-12 text-gray-300 mb-4">
+             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+             </svg>
+        </div>
+        <h2 className="text-xl font-medium text-gray-900 mb-2">{title}</h2>
+        <p className="text-gray-500 max-w-sm mx-auto">This module is currently under development. Check back soon for updates.</p>
+    </div>
+);
+
 export default function App() {
   const location = useLocation();
   const logQueue = useRef([]);
@@ -70,6 +82,8 @@ export default function App() {
         <AdminLayout>
           <Routes>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="projects" element={<AdminPlaceholder title="Projects Manager" />} />
+            <Route path="clients" element={<AdminPlaceholder title="Client Management" />} />
             <Route path="settings/storage" element={<SettingsStorage />} />
             <Route path="pages" element={<PageEditor />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
