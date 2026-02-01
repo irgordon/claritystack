@@ -1,7 +1,7 @@
 
 > app@1.0.60 preview
-> vite preview
+> vite preview --host 0.0.0.0 --port 4173
 
 [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
   ➜  Local:   http://localhost:4173/
-  ➜  Network: use --host to expose
+  ➜  Network: http://192.168.0.2:4173/
