@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
+require_once __DIR__ . '/../core/ConfigHelper.php';
+require_once __DIR__ . '/../core/SmtpClient.php';
 
 // Allow injecting test configuration via environment variable
 if ($testDb = getenv('CLARITY_TEST_DB')) {
@@ -17,11 +19,31 @@ if ($testDb = getenv('CLARITY_TEST_DB')) {
  * @param array $emails List of email records.
  * @param PDO $db Database connection.
  * @param string $nowFn SQL function for current time.
+ * @param array $smtpConfig Optional SMTP configuration.
  */
-function processEmailsBatch(array $emails, PDO $db, string $nowFn) {
+function processEmailsBatch(array $emails, PDO $db, string $nowFn, array $smtpConfig = []) {
     $sentIds = [];
     $failedIds = [];
     $batchSize = 10;
+    $smtpClient = null;
+
+    // Initialize SMTP Client if configured
+    if (!empty($smtpConfig['SMTP_HOST']) && !empty($smtpConfig['SMTP_PORT'])) {
+        try {
+            echo "Connecting to SMTP server {$smtpConfig['SMTP_HOST']}:{$smtpConfig['SMTP_PORT']}...\n";
+            $smtpClient = new SmtpClient(
+                $smtpConfig['SMTP_HOST'],
+                $smtpConfig['SMTP_PORT'],
+                $smtpConfig['SMTP_USER'] ?? null,
+                $smtpConfig['SMTP_PASS'] ?? null
+            );
+            $smtpClient->connect();
+            echo "SMTP Connected.\n";
+        } catch (Exception $e) {
+            echo "SMTP Connection Error: " . $e->getMessage() . " - Falling back to mail()\n";
+            $smtpClient = null;
+        }
+    }
 
     $flushBatch = function() use (&$sentIds, &$failedIds, $db, $nowFn) {
         if (!empty($sentIds)) {
@@ -42,10 +64,33 @@ function processEmailsBatch(array $emails, PDO $db, string $nowFn) {
         try {
             echo "Processing email ID: {$email['id']}... ";
 
-            // Use @ to suppress warnings from mail() if sendmail is not configured
-            $sent = @mail($email['to_email'], $email['subject'], $email['body'], $email['headers']);
+            $sent = false;
 
-            $msg = $sent ? "Sent.\n" : "Failed (Check mail configuration).\n";
+            if ($smtpClient) {
+                try {
+                    // Extract 'From' address from headers if possible
+                    $from = '';
+                    if (preg_match('/From:\s*([^<\r\n]*<([^>\r\n]+)>|([^\r\n]+))/', $email['headers'], $matches)) {
+                        $from = !empty($matches[2]) ? $matches[2] : trim($matches[3]);
+                    }
+                    if (empty($from)) {
+                        $from = 'noreply@' . gethostname();
+                    }
+
+                    $smtpClient->send($from, $email['to_email'], $email['subject'], $email['body'], $email['headers']);
+                    $sent = true;
+                } catch (Exception $e) {
+                    echo "SMTP Error: " . $e->getMessage() . " - Retrying with mail()... ";
+                    // If SMTP fails mid-batch, we could try to reconnect, but for now fallback to mail()
+                }
+            }
+
+            if (!$sent) {
+                // Use @ to suppress warnings from mail() if sendmail is not configured
+                $sent = @mail($email['to_email'], $email['subject'], $email['body'], $email['headers']);
+            }
+
+            $msg = $sent ? "Sent.\n" : "Failed.\n";
             echo $msg;
 
             if ($sent) {
@@ -63,6 +108,11 @@ function processEmailsBatch(array $emails, PDO $db, string $nowFn) {
         }
     }
 
+    // Close SMTP connection
+    if ($smtpClient) {
+        $smtpClient->quit();
+    }
+
     // Flush remaining
     $flushBatch();
 }
@@ -71,6 +121,16 @@ echo "Starting Email Queue Processor...\n";
 
 try {
     $db = Database::getInstance()->connect();
+
+    // Load Configuration
+    $storageConfig = ConfigHelper::getStorageConfig();
+    $smtpConfig = [
+        'SMTP_HOST' => $storageConfig['SMTP_HOST'] ?? null,
+        'SMTP_PORT' => $storageConfig['SMTP_PORT'] ?? null,
+        'SMTP_USER' => $storageConfig['SMTP_USER'] ?? null,
+        'SMTP_PASS' => $storageConfig['SMTP_PASS'] ?? null,
+    ];
+
     $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
     $isSqlite = ($driver === 'sqlite');
 
@@ -130,7 +190,7 @@ try {
                 Database::getInstance()->conn = null;
                 try {
                     $childDb = Database::getInstance()->connect();
-                    processEmailsBatch($chunk, $childDb, $nowFn);
+                    processEmailsBatch($chunk, $childDb, $nowFn, $smtpConfig);
                 } catch (Exception $e) {
                     echo "Worker Error: " . $e->getMessage() . "\n";
                     exit(1);
@@ -146,7 +206,7 @@ try {
 
     } else {
         // Sequential Fallback
-        processEmailsBatch($emails, $db, $nowFn);
+        processEmailsBatch($emails, $db, $nowFn, $smtpConfig);
     }
 
 } catch (Exception $e) {
