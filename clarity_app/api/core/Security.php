@@ -3,6 +3,7 @@ namespace Core;
 
 class Security {
     private static $key = null;
+    private static $sodiumKey = null;
 
     private static function getKey() {
         if (self::$key === null) {
@@ -13,6 +14,18 @@ class Security {
     }
 
     public static function encrypt($data) {
+        // Performance Optimization: Use Sodium (XSalsa20-Poly1305) if available
+        // It is significantly faster than OpenSSL AES-256-CBC
+        if (extension_loaded('sodium')) {
+            if (self::$sodiumKey === null) {
+                self::$sodiumKey = hash('sha256', self::getKey(), true);
+            }
+
+            $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+            $ciphertext = sodium_crypto_secretbox($data, $nonce, self::$sodiumKey);
+            return 'v2:' . base64_encode($nonce . $ciphertext);
+        }
+
         $key = self::getKey();
         $ivLength = openssl_cipher_iv_length('aes-256-cbc');
         $iv = random_bytes($ivLength);
@@ -24,6 +37,33 @@ class Security {
         $key = self::getKey();
         if (!$data) return '';
 
+        // Check for v2 (Sodium) tokens
+        if (strpos($data, 'v2:') === 0) {
+            if (!extension_loaded('sodium')) {
+                // If sodium was disabled after creating tokens, we can't decrypt
+                error_log("Security::decrypt - Sodium extension missing for v2 token");
+                return '';
+            }
+
+            $encoded = substr($data, 3);
+            $decoded = base64_decode($encoded);
+
+            if (strlen($decoded) < SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
+                return '';
+            }
+
+            $nonce = substr($decoded, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+            $ciphertext = substr($decoded, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+
+            if (self::$sodiumKey === null) {
+                self::$sodiumKey = hash('sha256', $key, true);
+            }
+
+            $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, self::$sodiumKey);
+            return $plaintext !== false ? $plaintext : '';
+        }
+
+        // Legacy Fallback (OpenSSL)
         $decoded = base64_decode($data);
         if (strpos($decoded, '::') === false) {
             return '';
