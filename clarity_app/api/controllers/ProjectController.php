@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/Security.php';
+require_once __DIR__ . '/../core/CacheService.php';
+
+use Core\CacheService;
 
 class ProjectController {
     private $db;
@@ -91,29 +94,14 @@ class ProjectController {
     }
 
     private function getPhotoCount($projectId) {
-        $cacheFile = sys_get_temp_dir() . '/clarity_count_' . md5($projectId);
+        $cacheKey = md5($projectId);
 
-        // Cache Hit (60s TTL)
-        if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 60)) {
-            $count = @file_get_contents($cacheFile);
-            if ($count !== false) {
-                return (int)$count;
-            }
-        }
-
-        // Cache Miss
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
-        $stmt->execute([$projectId]);
-        $count = $stmt->fetchColumn();
-
-        // Atomic Write
-        $tempFile = tempnam(sys_get_temp_dir(), 'count_tmp');
-        if ($tempFile) {
-            file_put_contents($tempFile, $count);
-            rename($tempFile, $cacheFile);
-        }
-
-        return (int)$count;
+        // Use CacheService with 60s TTL
+        return CacheService::remember('counts', $cacheKey, 60, function() use ($projectId) {
+             $stmt = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
+             $stmt->execute([$projectId]);
+             return (int)$stmt->fetchColumn();
+        });
     }
 }
 ?>

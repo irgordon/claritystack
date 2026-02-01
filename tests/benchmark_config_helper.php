@@ -4,8 +4,11 @@
 
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
 require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
+require_once __DIR__ . '/../clarity_app/api/core/CacheService.php';
 
-// 1. Setup SQLite In-Memory DB (or temporary file) to ensure consistent environment
+use Core\CacheService;
+
+// 1. Setup SQLite In-Memory DB
 $dbFile = sys_get_temp_dir() . '/bench_config_helper.sqlite';
 if (file_exists($dbFile)) unlink($dbFile);
 
@@ -16,6 +19,7 @@ try {
     // Create Schema
     $pdo->exec("CREATE TABLE settings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        business_name TEXT,
         public_config TEXT,
         private_config TEXT,
         updated_at DATETIME
@@ -25,35 +29,37 @@ try {
     $publicConfig = json_encode(['site_name' => 'Clarity Benchmark', 'link_timeout' => 15]);
     $privateConfig = json_encode(['secret_key' => '12345']);
 
-    $stmt = $pdo->prepare("INSERT INTO settings (public_config, private_config, updated_at) VALUES (?, ?, datetime('now'))");
+    $stmt = $pdo->prepare("INSERT INTO settings (business_name, public_config, private_config, updated_at) VALUES ('Biz', ?, ?, datetime('now'))");
     $stmt->execute([$publicConfig, $privateConfig]);
 
 } catch (Exception $e) {
     die("Setup failed: " . $e->getMessage() . "\n");
 }
 
+// Clear existing cache
+ConfigHelper::clearCache();
+
 // 2. Define Benchmark Function
 function benchmark($iterations, $dbFile) {
     $start = microtime(true);
 
-    $reflectionConfig = new ReflectionClass('ConfigHelper');
-    $cacheProperty = $reflectionConfig->getProperty('cache');
-    $cacheProperty->setAccessible(true);
+    // We want to simulate per-request overhead.
+    // In original benchmark, we reset ConfigHelper::$cache.
+    // Now ConfigHelper uses CacheService, which has its own L1 cache.
+    // So we must reset CacheService memory cache to simulate new request.
 
-    // Note: We are NOT resetting Database instance here, just ConfigHelper cache.
-    // This measures the cost of "ConfigHelper::load()" doing a DB Query vs doing a File Read.
-    // The Database connection itself is reused (cached) by the Singleton.
+    $reflectionService = new ReflectionClass('Core\CacheService');
+    $memoryCacheProp = $reflectionService->getProperty('memoryCache');
+    $memoryCacheProp->setAccessible(true);
 
     for ($i = 0; $i < $iterations; $i++) {
-        // Reset ConfigHelper static cache
-        $cacheProperty->setValue(null, null);
+        // Reset Memory Cache (simulate fresh request)
+        $memoryCacheProp->setValue(null, []);
 
-        // Access a config value (triggers load())
+        // Access a config value (triggers load() which hits File Cache via CacheService)
         $val = ConfigHelper::get('site_name');
 
         if ($val !== 'Clarity Benchmark') {
-             // Debug info
-             echo "ConfigHelper Cache State: " . print_r($cacheProperty->getValue(), true) . "\n";
              die("Verification failed! Got: " . var_export($val, true));
         }
     }
@@ -80,7 +86,7 @@ try {
 
 // 3. Run Benchmark
 $iterations = 1000;
-echo "Running ConfigHelper Benchmark ($iterations iterations)...\n";
+echo "Running ConfigHelper (CacheService) Benchmark ($iterations iterations)...\n";
 
 // Warmup
 benchmark(10, $dbFile);
@@ -95,4 +101,5 @@ echo sprintf("Ops/sec: %.2f\n", $ops);
 
 // Cleanup
 if (file_exists($dbFile)) unlink($dbFile);
+ConfigHelper::clearCache();
 ?>
