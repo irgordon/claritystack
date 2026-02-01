@@ -2,13 +2,21 @@
 namespace Core;
 
 class Logger {
-    private static $logFile = __DIR__ . '/../../logs/clarity.log';
+    private static $logFile = null;
+
+    private static function getLogFile() {
+        if (self::$logFile === null) {
+            self::$logFile = __DIR__ . '/../../logs/clarity.log';
+            $dir = dirname(self::$logFile);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+        }
+        return self::$logFile;
+    }
 
     public static function log($level, $message, $context = []) {
-        $dir = dirname(self::$logFile);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        $file = self::getLogFile();
 
         $entry = [
             'timestamp' => date('Y-m-d H:i:s'),
@@ -17,8 +25,8 @@ class Logger {
             'context' => $context
         ];
 
-        // atomic write not strictly necessary for logs, but FILE_APPEND is atomic enough for lines usually
-        file_put_contents(self::$logFile, json_encode($entry) . PHP_EOL, FILE_APPEND);
+        // Use LOCK_EX to prevent interleaving
+        file_put_contents($file, json_encode($entry) . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     public static function info($message, $context = []) {
@@ -34,10 +42,7 @@ class Logger {
     }
 
     public static function batchLog(array $entries) {
-        $dir = dirname(self::$logFile);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        $file = self::getLogFile();
 
         $buffer = '';
         foreach ($entries as $entry) {
@@ -51,8 +56,7 @@ class Logger {
         }
 
         if ($buffer !== '') {
-            file_put_contents(self::$logFile, $buffer, FILE_APPEND | LOCK_EX);
+            file_put_contents($file, $buffer, FILE_APPEND | LOCK_EX);
         }
     }
 }
-?>

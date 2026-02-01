@@ -2,6 +2,11 @@
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailService.php';
 require_once __DIR__ . '/ConfigHelper.php';
+require_once __DIR__ . '/CacheService.php';
+require_once __DIR__ . '/Logger.php';
+
+use Core\CacheService;
+use Core\Logger;
 
 class ThemeEngine {
     private $themePath;
@@ -14,7 +19,6 @@ class ThemeEngine {
     private $currentDepth = 0;
 
     private $blockFileCache = [];
-    private $purificationCache = [];
 
     // SECURITY: Allowed HTML Tags for CMS Content
     private const ALLOWED_TAGS = ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'img', 'blockquote'];
@@ -48,55 +52,36 @@ class ThemeEngine {
 
             $cacheKey = md5($layoutSlug . serialize($blocksTree) . $settingsUpdatedAt . $layoutMtime);
 
-            $cacheDir = sys_get_temp_dir() . '/clarity_page_cache';
-            if (!is_dir($cacheDir)) {
-                @mkdir($cacheDir, 0755, true);
-            }
+            // Use CacheService with infinite TTL (0), invalidated by key changes
+            return CacheService::remember('pages', $cacheKey, 0, function() use ($layoutSlug, $blocksTree, $publicConfig, $businessName, $layoutPath) {
 
-            $cacheFile = $cacheDir . '/' . $cacheKey . '.html';
+                $globalConfig = $publicConfig;
+                $globalConfig['business_name'] = $businessName;
 
-            if (file_exists($cacheFile)) {
-                return file_get_contents($cacheFile);
-            }
-            
-            $globalConfig = $publicConfig;
-            $globalConfig['business_name'] = $businessName;
-            
-            // XSS PROTECTION: Sanitize Business Name and Global Config Strings
-            foreach ($globalConfig as $key => $val) {
-                if (is_string($val)) {
-                    // Business name and strict config values get strict escaping
-                    $globalConfig[$key] = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+                // XSS PROTECTION: Sanitize Business Name and Global Config Strings
+                foreach ($globalConfig as $key => $val) {
+                    if (is_string($val)) {
+                        // Business name and strict config values get strict escaping
+                        $globalConfig[$key] = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+                    }
                 }
-            }
-            
-            extract($globalConfig); 
 
-            // Render Body
-            $bodyHtml = $this->renderTree($blocksTree);
+                extract($globalConfig);
 
-            // Render Layout
-            ob_start();
-            $body = $bodyHtml; 
-            include $layoutPath;
-            $fullHtml = ob_get_clean();
+                // Render Body
+                $bodyHtml = $this->renderTree($blocksTree);
 
-            $finalHtml = $this->parseShortcodes($fullHtml);
+                // Render Layout
+                ob_start();
+                $body = $bodyHtml;
+                include $layoutPath;
+                $fullHtml = ob_get_clean();
 
-            // Save to Cache (Atomic Write)
-            if (is_dir($cacheDir) && is_writable($cacheDir)) {
-                $tempFile = tempnam($cacheDir, 'tmp_');
-                if ($tempFile !== false) {
-                    file_put_contents($tempFile, $finalHtml);
-                    @rename($tempFile, $cacheFile);
-                    @chmod($cacheFile, 0644);
-                }
-            }
-
-            return $finalHtml;
+                return $this->parseShortcodes($fullHtml);
+            });
 
         } catch (Exception $e) {
-            $this->logAndNotify('critical', 'Page Rendering Failed', ['error' => $e->getMessage()]);
+            Logger::critical('Page Rendering Failed', ['error' => $e->getMessage()]);
             http_response_code(500);
             return $this->getFallbackHtml();
         }
@@ -196,105 +181,70 @@ class ThemeEngine {
         // Include allowed tags in key to invalidate if security policy changes
         $cacheKey = md5($dirtyHtml . serialize(self::ALLOWED_TAGS));
 
-        // L1: Memory Cache
-        if (isset($this->purificationCache[$cacheKey])) {
-            return $this->purificationCache[$cacheKey];
-        }
+        return CacheService::remember('purify', $cacheKey, 0, function() use ($dirtyHtml) {
 
-        // L2: Persistent File Cache
-        $cacheDir = sys_get_temp_dir() . '/clarity_purify_cache';
-        $cacheFile = $cacheDir . '/' . $cacheKey . '.txt';
+            // Suppress parsing errors for invalid HTML
+            libxml_use_internal_errors(true);
 
-        // Ensure cache directory exists (lazy creation)
-        if (!is_dir($cacheDir)) {
-            @mkdir($cacheDir, 0755, true);
-        }
-
-        if (file_exists($cacheFile)) {
-            $cleanHtml = file_get_contents($cacheFile);
-            if ($cleanHtml !== false) {
-                $this->purificationCache[$cacheKey] = $cleanHtml;
-                return $cleanHtml;
-            }
-        }
-
-        // Suppress parsing errors for invalid HTML
-        libxml_use_internal_errors(true);
-
-        if ($this->dom === null) {
-            $this->dom = new DOMDocument();
-        }
-
-        // Load HTML with UTF-8 fix
-        // Optimization: Use meta charset instead of mb_convert_encoding for better performance
-        $this->dom->loadHTML('<div><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' . $dirtyHtml . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-
-        // Remove the meta tag we added
-        $meta = $this->dom->getElementsByTagName('meta')->item(0);
-        if ($meta) {
-            $meta->parentNode->removeChild($meta);
-        }
-
-        // 1. Remove Disallowed Tags (Script, Object, Iframe, Style, etc.)
-        // We select ALL elements and remove those not in our allowed list
-        $nodes = $this->dom->getElementsByTagName('*');
-        $nodesList = iterator_to_array($nodes);
-
-        foreach ($nodesList as $node) {
-            // Check if node is still attached or part of a removed branch
-            if (!$node->parentNode) {
-                continue;
+            if ($this->dom === null) {
+                $this->dom = new DOMDocument();
             }
 
-            if (!in_array($node->nodeName, self::ALLOWED_TAGS)) {
-                $node->parentNode->removeChild($node);
-            } else {
-                // 2. Remove Dangerous Attributes (on*, javascript:)
-                if ($node->hasAttributes()) {
-                    // Iterate backwards to safely remove attributes while looping
-                    for ($i = $node->attributes->length - 1; $i >= 0; $i--) {
-                        $attr = $node->attributes->item($i);
-                        $attrName = strtolower($attr->name);
-                        $attrVal = strtolower($attr->value);
+            // Load HTML with UTF-8 fix
+            // Optimization: Use meta charset instead of mb_convert_encoding for better performance
+            $this->dom->loadHTML('<div><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' . $dirtyHtml . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
-                        // Remove event handlers (onclick, onload)
-                        if (strpos($attrName, 'on') === 0) {
-                            $node->removeAttribute($attr->name);
-                            continue;
-                        }
+            // Remove the meta tag we added
+            $meta = $this->dom->getElementsByTagName('meta')->item(0);
+            if ($meta) {
+                $meta->parentNode->removeChild($meta);
+            }
 
-                        // Remove javascript: URIs in href or src
-                        if (($attrName === 'href' || $attrName === 'src') && strpos($attrVal, 'javascript:') !== false) {
-                            $node->removeAttribute($attr->name);
+            // 1. Remove Disallowed Tags (Script, Object, Iframe, Style, etc.)
+            // We select ALL elements and remove those not in our allowed list
+            $nodes = $this->dom->getElementsByTagName('*');
+            $nodesList = iterator_to_array($nodes);
+
+            foreach ($nodesList as $node) {
+                // Check if node is still attached or part of a removed branch
+                if (!$node->parentNode) {
+                    continue;
+                }
+
+                if (!in_array($node->nodeName, self::ALLOWED_TAGS)) {
+                    $node->parentNode->removeChild($node);
+                } else {
+                    // 2. Remove Dangerous Attributes (on*, javascript:)
+                    if ($node->hasAttributes()) {
+                        // Iterate backwards to safely remove attributes while looping
+                        for ($i = $node->attributes->length - 1; $i >= 0; $i--) {
+                            $attr = $node->attributes->item($i);
+                            $attrName = strtolower($attr->name);
+                            $attrVal = strtolower($attr->value);
+
+                            // Remove event handlers (onclick, onload)
+                            if (strpos($attrName, 'on') === 0) {
+                                $node->removeAttribute($attr->name);
+                                continue;
+                            }
+
+                            // Remove javascript: URIs in href or src
+                            if (($attrName === 'href' || $attrName === 'src') && strpos($attrVal, 'javascript:') !== false) {
+                                $node->removeAttribute($attr->name);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Save sanitized HTML (strip the wrapper div we added)
-        $cleanHtml = $this->dom->saveHTML($this->dom->documentElement);
-        $cleanHtml = substr($cleanHtml, 5, -6); // Remove <div> and </div>
+            // Save sanitized HTML (strip the wrapper div we added)
+            $cleanHtml = $this->dom->saveHTML($this->dom->documentElement);
+            $cleanHtml = substr($cleanHtml, 5, -6); // Remove <div> and </div>
 
-        libxml_clear_errors();
+            libxml_clear_errors();
 
-        // Cache the result
-        $this->purificationCache[$cacheKey] = $cleanHtml;
-
-        // Persist to L2 Cache
-        if (is_dir($cacheDir) && is_writable($cacheDir)) {
-            $tempFile = tempnam($cacheDir, 'tmp_');
-            if ($tempFile !== false) {
-                if (file_put_contents($tempFile, $cleanHtml) !== false) {
-                    @rename($tempFile, $cacheFile);
-                    @chmod($cacheFile, 0644);
-                } else {
-                    @unlink($tempFile);
-                }
-            }
-        }
-
-        return $cleanHtml;
+            return $cleanHtml;
+        });
     }
 
     private function parseIncludes($content) {
@@ -305,14 +255,6 @@ class ThemeEngine {
 
     private function parseShortcodes($content) {
         return str_replace('[theme-url]', $this->publicUrl, $content);
-    }
-
-    private function logAndNotify($severity, $message, $context = []) {
-        // (Logging logic remains the same as previous examples)
-        try {
-            $stmt = $this->db->prepare("INSERT INTO system_logs (severity, category, message, context) VALUES (?, 'cms', ?, ?)");
-            $stmt->execute([$severity, $message, json_encode($context)]);
-        } catch (Exception $e) { }
     }
 
     private function getFallbackHtml() {

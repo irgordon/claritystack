@@ -32,6 +32,11 @@ class ImagekitAdapter implements StorageInterface {
         return file_get_contents($this->getUrl($path));
     }
 
+    public function readStream(string $path) {
+        $url = $this->getUrl($path);
+        return @fopen($url, 'rb');
+    }
+
     public function delete(string $path): bool {
         // ImageKit requires File ID for deletion, not path.
         // This is a limitation. We would need to search for the file ID first.

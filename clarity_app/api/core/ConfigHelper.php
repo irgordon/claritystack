@@ -1,96 +1,57 @@
 <?php
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/Security.php';
+require_once __DIR__ . '/CacheService.php';
 
 use Core\Security;
+use Core\CacheService;
 
 class ConfigHelper {
-    // Static cache to persist settings in memory for the duration of the request
-    private static $cache = null;
     private static $storageCache = null;
 
     /**
-     * Lazy-loads the configuration from the database.
+     * Loads the configuration from cache or database.
      */
     private static function load() {
-        // If already loaded, do nothing (Memoization)
-        if (self::$cache !== null) {
-            return;
-        }
+        return CacheService::remember('config', 'settings', 0, function() {
+            try {
+                $db = \Database::getInstance()->connect();
+                $stmt = $db->query("SELECT business_name, public_config, private_config, updated_at FROM settings LIMIT 1");
+                $row = $stmt->fetch();
 
-        $cacheFile = self::getCacheFile();
-        if (file_exists($cacheFile)) {
-            $data = include $cacheFile;
-            // Validate structure to ensure we have the new fields (business_name, etc)
-            // If missing, we force a reload.
-            if (is_array($data) && isset($data['public'], $data['private'], $data['business_name'])) {
-                self::$cache = $data;
-                return;
-            }
-        }
+                $cache = [
+                    'public' => [],
+                    'private' => [],
+                    'business_name' => '',
+                    'updated_at' => '0'
+                ];
 
-        try {
-            $db = \Database::getInstance()->connect();
-            // Added business_name and updated_at to the query
-            $stmt = $db->query("SELECT business_name, public_config, private_config, updated_at FROM settings LIMIT 1");
-            $row = $stmt->fetch();
-
-            self::$cache = [
-                'public' => [],
-                'private' => [],
-                'business_name' => '',
-                'updated_at' => '0'
-            ];
-
-            if ($row) {
-                if (isset($row['public_config'])) {
-                    self::$cache['public'] = json_decode($row['public_config'], true) ?? [];
-                }
-                if (isset($row['private_config'])) {
-                    self::$cache['private'] = json_decode($row['private_config'], true) ?? [];
-                }
-                if (isset($row['business_name'])) {
-                    self::$cache['business_name'] = $row['business_name'];
-                }
-                if (isset($row['updated_at'])) {
-                    self::$cache['updated_at'] = $row['updated_at'];
-                }
-            }
-
-            // Write to file cache (Atomic)
-            $tempFile = tempnam(sys_get_temp_dir(), 'clarity_tmp');
-            if ($tempFile) {
-                chmod($tempFile, 0600); // Secure before writing content
-                $content = "<?php return " . var_export(self::$cache, true) . ";";
-                if (file_put_contents($tempFile, $content) !== false) {
-                    rename($tempFile, $cacheFile);
-                    // Invalidate OPcache to ensure the new file is read immediately
-                    if (function_exists('opcache_invalidate')) {
-                        @opcache_invalidate($cacheFile, true);
+                if ($row) {
+                    if (isset($row['public_config'])) {
+                        $cache['public'] = json_decode($row['public_config'], true) ?? [];
                     }
-                } else {
-                    @unlink($tempFile);
+                    if (isset($row['private_config'])) {
+                        $cache['private'] = json_decode($row['private_config'], true) ?? [];
+                    }
+                    if (isset($row['business_name'])) {
+                        $cache['business_name'] = $row['business_name'];
+                    }
+                    if (isset($row['updated_at'])) {
+                        $cache['updated_at'] = $row['updated_at'];
+                    }
                 }
+                return $cache;
+
+            } catch (Exception $e) {
+                // Fallback to empty array if DB fails so the app doesn't crash completely
+                error_log("ConfigHelper Error: " . $e->getMessage());
+                return ['public' => [], 'private' => [], 'business_name' => '', 'updated_at' => '0'];
             }
-
-        } catch (Exception $e) {
-            // Fallback to empty array if DB fails so the app doesn't crash completely
-            error_log("ConfigHelper Error: " . $e->getMessage());
-            self::$cache = ['public' => [], 'private' => [], 'business_name' => '', 'updated_at' => '0'];
-        }
-    }
-
-    private static function getCacheFile() {
-        // Use a unique hash based on the directory to prevent collisions in shared environments
-        return sys_get_temp_dir() . '/clarity_config_' . md5(__DIR__) . '.php';
+        });
     }
 
     public static function clearCache() {
-        $file = self::getCacheFile();
-        if (file_exists($file)) {
-            unlink($file);
-        }
-        self::$cache = null;
+        CacheService::delete('config', 'settings');
         self::$storageCache = null;
     }
 
@@ -98,8 +59,8 @@ class ConfigHelper {
      * Returns the configured link timeout, defaulting to 10 minutes.
      */
     public static function getTimeout() {
-        self::load();
-        return (int)(self::$cache['public']['link_timeout'] ?? 10);
+        $data = self::load();
+        return (int)($data['public']['link_timeout'] ?? 10);
     }
 
     /**
@@ -107,32 +68,32 @@ class ConfigHelper {
      * Usage: ConfigHelper::get('primary_color', '#000000');
      */
     public static function get($key, $default = null) {
-        self::load();
-        return self::$cache['public'][$key] ?? $default;
+        $data = self::load();
+        return $data['public'][$key] ?? $default;
     }
 
     /**
      * Returns the business name.
      */
     public static function getBusinessName() {
-        self::load();
-        return self::$cache['business_name'] ?? '';
+        $data = self::load();
+        return $data['business_name'] ?? '';
     }
 
     /**
      * Returns the settings updated_at timestamp.
      */
     public static function getUpdatedAt() {
-        self::load();
-        return self::$cache['updated_at'] ?? '0';
+        $data = self::load();
+        return $data['updated_at'] ?? '0';
     }
 
     /**
      * Returns the entire public config array.
      */
     public static function getPublicConfig() {
-        self::load();
-        return self::$cache['public'] ?? [];
+        $data = self::load();
+        return $data['public'] ?? [];
     }
 
     /**
@@ -144,16 +105,16 @@ class ConfigHelper {
             return self::$storageCache;
         }
 
-        self::load();
+        $data = self::load();
 
         $config = [];
 
         // Merge public and decrypted private settings
-        foreach (self::$cache['public'] as $k => $v) {
+        foreach ($data['public'] as $k => $v) {
             $config[strtoupper($k)] = $v;
         }
 
-        foreach (self::$cache['private'] as $k => $v) {
+        foreach ($data['private'] as $k => $v) {
             if (!empty($v)) {
                 $config[strtoupper($k)] = Security::decrypt($v);
             }

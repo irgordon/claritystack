@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
 require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
 require_once __DIR__ . '/../clarity_app/api/core/Router.php';
+require_once __DIR__ . '/../clarity_app/api/core/CacheService.php';
+
+use Core\CacheService;
 
 // 0. API ROUTING
 $requestUri = $_SERVER['REQUEST_URI'];
@@ -29,6 +32,10 @@ if (strpos($requestUri, '/api/') === 0) {
     // Projects
     $router->add('GET', '/projects/{id}/photos', 'ProjectController', 'listPhotos');
 
+    // Download
+    $router->add('POST', '/projects/{id}/download-link', 'DownloadController', 'generateLink');
+    $router->add('GET', '/download/stream', 'DownloadController', 'streamZip');
+
     $router->dispatch($requestUri);
     exit;
 }
@@ -37,19 +44,9 @@ if (strpos($requestUri, '/api/') === 0) {
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $slug = trim($path, '/') ?: 'home';
 
-// 2. Fetch SEO Data (Cached)
-$cacheFile = sys_get_temp_dir() . '/clarity_seo_' . md5($slug) . '.json';
-$page = null;
-
+// 2. Fetch SEO Data (Cached via CacheService)
 // Cache TTL: 1 hour (3600s)
-if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 3600)) {
-    $cachedContent = @file_get_contents($cacheFile);
-    if ($cachedContent) {
-        $page = json_decode($cachedContent, true);
-    }
-}
-
-if (!$page) {
+$page = CacheService::remember('seo', md5($slug), 3600, function() use ($slug) {
     // Connect to DB only if cache miss
     $db = Database::getInstance()->connect();
 
@@ -57,22 +54,14 @@ if (!$page) {
         try {
             $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
             $stmt->execute([$slug]);
-            $page = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Write to cache if page found
-            if ($page) {
-                // Atomic write
-                $tempFile = tempnam(sys_get_temp_dir(), 'seo_tmp');
-                if ($tempFile) {
-                    file_put_contents($tempFile, json_encode($page));
-                    rename($tempFile, $cacheFile);
-                }
-            }
+            return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            // DB error or not installed, ignore and serve default shell
+            // DB error or not installed
+            return null;
         }
     }
-}
+    return null;
+});
 
 // 3. Fetch Global Config (Memoized & Cached)
 $config = ConfigHelper::getPublicConfig();

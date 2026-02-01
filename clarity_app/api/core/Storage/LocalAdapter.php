@@ -29,6 +29,14 @@ class LocalAdapter implements StorageInterface {
         return null;
     }
 
+    public function readStream(string $path) {
+        $fullPath = $this->getFullPath($path);
+        if (file_exists($fullPath)) {
+            return fopen($fullPath, 'rb');
+        }
+        return null;
+    }
+
     public function delete(string $path): bool {
         $fullPath = $this->getFullPath($path);
         if (file_exists($fullPath)) {

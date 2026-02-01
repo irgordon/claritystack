@@ -45,6 +45,11 @@ class CloudinaryAdapter implements StorageInterface {
         return file_get_contents($url);
     }
 
+    public function readStream(string $path) {
+        $url = $this->getUrl($path);
+        return @fopen($url, 'rb');
+    }
+
     public function delete(string $path): bool {
         try {
             // Remove extension for public_id

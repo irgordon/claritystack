@@ -1,92 +1,58 @@
 <?php
+// Benchmark for index.php SEO Logic
+// We can't include index.php directly because it outputs HTML and exits.
+// We will mock the parts we need and test CacheService interaction.
+
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
-require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
+require_once __DIR__ . '/../clarity_app/api/core/CacheService.php';
 
-// Setup Test DB
-$dbPath = sys_get_temp_dir() . '/seo_benchmark.sqlite';
-@unlink($dbPath);
+use Core\CacheService;
 
-$config = [
+// Setup Mock DB
+$dbFile = sys_get_temp_dir() . '/bench_seo.sqlite';
+if (file_exists($dbFile)) unlink($dbFile);
+
+$pdo = new PDO("sqlite:$dbFile");
+$pdo->exec("CREATE TABLE pages (slug TEXT, title TEXT, meta_description TEXT, og_image_url TEXT)");
+$pdo->exec("INSERT INTO pages VALUES ('home', 'Home Page', 'Welcome', 'img.jpg')");
+
+// Override Database Singleton to use our mock
+Database::getInstance()->setConfig([
     'DB_DRIVER' => 'sqlite',
-    'DB_NAME' => $dbPath,
-    'DB_USER' => '',
-    'DB_PASS' => ''
-];
+    'DB_NAME' => $dbFile,
+    'DB_USER' => null,
+    'DB_PASS' => null
+]);
 
-Database::getInstance()->setConfig($config);
-$db = Database::getInstance()->connect();
-
-// Create Tables
-$db->exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, public_config TEXT, private_config TEXT, business_name TEXT, updated_at TEXT)");
-$db->exec("CREATE TABLE pages (id INTEGER PRIMARY KEY, slug TEXT, title TEXT, meta_description TEXT, og_image_url TEXT)");
-
-// Insert Data
-$db->exec("INSERT INTO settings (public_config, private_config, business_name, updated_at) VALUES ('{\"seo\": {\"site_name\": \"Test Site\"}}', '{}', 'My Business', '1234567890')");
-$db->exec("INSERT INTO pages (slug, title, meta_description, og_image_url) VALUES ('home', 'Home Page', 'Best page ever', 'http://example.com/image.jpg')");
-
-// Clear ConfigHelper cache
-ConfigHelper::clearCache();
-
-// Benchmark Logic
 $slug = 'home';
-$iterations = 1000;
+$key = md5($slug);
 
-echo "Benchmarking Baseline (Raw Queries)...\n";
+CacheService::flush('seo');
+
+// 1. First Load (Cache Miss)
 $start = microtime(true);
-
-for ($i = 0; $i < $iterations; $i++) {
-    // 2. Fetch SEO Data
+$page = CacheService::remember('seo', $key, 3600, function() use ($slug) {
+    $db = Database::getInstance()->connect();
     $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
     $stmt->execute([$slug]);
-    $page = $stmt->fetch();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+});
+$firstLoad = microtime(true) - $start;
 
-    // 3. Fetch Global Config
-    $settings = $db->query("SELECT public_config FROM settings LIMIT 1")->fetch();
+if ($page['title'] !== 'Home Page') die("First load failed");
+
+// 2. Second Load (Cache Hit)
+$start = microtime(true);
+$page = CacheService::remember('seo', $key, 3600, function() use ($slug) {
+    die("Should not be called!");
+});
+$secondLoad = microtime(true) - $start;
+
+echo "First Load (DB): " . number_format($firstLoad * 1000, 4) . " ms\n";
+echo "Second Load (Cache): " . number_format($secondLoad * 1000, 4) . " ms\n";
+
+if ($secondLoad > $firstLoad) {
+    echo "WARNING: Cache slower than DB (might be SQLite speed vs File IO overhead)\n";
+} else {
+    echo "Improvement: " . number_format(($firstLoad - $secondLoad) * 1000, 4) . " ms\n";
 }
-
-$end = microtime(true);
-$baseline = $end - $start;
-echo "Baseline: " . number_format($baseline, 4) . "s (" . number_format(($baseline / $iterations) * 1000, 4) . "ms/req)\n";
-
-// Optimized Benchmark Preview (Simulated)
-echo "Benchmarking Optimized (ConfigHelper + Cache)...\n";
-
-// Clear ConfigHelper cache again to start fresh
-ConfigHelper::clearCache();
-
-// Pre-warm the cache once for fairness if we assume steady state,
-// OR we can include the warm-up in the loop.
-// Realistically, the cache is hit most of the time.
-// Let's run the loop.
-
-$startOpt = microtime(true);
-
-for ($i = 0; $i < $iterations; $i++) {
-    // Simulate Optimized Logic
-
-    // ConfigHelper (Memoized internally)
-    $publicConfig = ConfigHelper::getPublicConfig();
-
-    // Page Cache (Simulation)
-    $cacheFile = sys_get_temp_dir() . '/clarity_seo_' . md5($slug) . '.json';
-    if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 3600)) {
-        $json = file_get_contents($cacheFile);
-        if ($json) $page = json_decode($json, true);
-    } else {
-        $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
-        $stmt->execute([$slug]);
-        $page = $stmt->fetch();
-        // Write Cache
-        file_put_contents($cacheFile, json_encode($page));
-    }
-}
-
-$endOpt = microtime(true);
-$optimized = $endOpt - $startOpt;
-echo "Optimized: " . number_format($optimized, 4) . "s (" . number_format(($optimized / $iterations) * 1000, 4) . "ms/req)\n";
-
-echo "Improvement: " . number_format((($baseline - $optimized) / $baseline) * 100, 2) . "%\n";
-
-@unlink($dbPath);
-@unlink(sys_get_temp_dir() . '/clarity_seo_' . md5($slug) . '.json');
-?>
