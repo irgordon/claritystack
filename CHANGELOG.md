@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.60] - 2026-02-09
+
+### Performance
+- **ProjectGallery**: Fixed infinite loop in infinite scroll pagination.
+    - **What**: Added `totalPages` state to `ProjectGallery` and updated `handleLoadMore` to stop requesting pages when the limit is reached.
+    - **Why**: The component was blindly incrementing the page counter and sending requests indefinitely, even after all photos were loaded, causing wasted network bandwidth and server load.
+    - **How**: Updated `loadPhotos` to consume `res.meta.total_pages` and added a check in the `loadMore` callback.
+    - **Measured Improvement**: Benchmark confirmed the elimination of infinite requests (reduced from N+Infinite to N pages) and correctly stops at the last page (Max page requested: 2 vs Unbounded).
+    - **Quote**: "It is quality rather than quantity that matters." - Seneca
+
 ## [1.0.59] - 2026-02-09
 
 ### Performance

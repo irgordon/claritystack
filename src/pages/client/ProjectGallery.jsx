@@ -81,6 +81,7 @@ export default function ProjectGallery() {
     const { id } = useParams();
     const [photos, setPhotos] = useState([]); // Flat array of photos
     const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const loadingRef = useRef(false);
 
     const loadPhotos = useCallback(async (p) => {
@@ -90,6 +91,9 @@ export default function ProjectGallery() {
             const res = await secureFetch(`/api/projects/${id}/photos?page=${p}`);
             if (res.data && Array.isArray(res.data)) {
                  setPhotos(prev => [...prev, ...res.data]);
+            }
+            if (res.meta && res.meta.total_pages) {
+                setTotalPages(res.meta.total_pages);
             }
         } catch (e) {
             console.error(e);
@@ -108,11 +112,11 @@ export default function ProjectGallery() {
     };
 
     const handleLoadMore = useCallback(() => {
-        if (!loadingRef.current) {
+        if (!loadingRef.current && page < totalPages) {
              loadingRef.current = true;
              setPage(prev => prev + 1);
         }
-    }, []);
+    }, [page, totalPages]);
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
