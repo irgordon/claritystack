@@ -24,7 +24,7 @@ class GoogleDriveAdapter implements StorageInterface {
             // Note: Does not support subfolders dynamically in this simple example
         ]);
         
-        $content = file_get_contents($sourceFile);
+        $content = fopen($sourceFile, 'rb');
         
         try {
             $this->service->files->create($fileMetadata, [
@@ -36,6 +36,10 @@ class GoogleDriveAdapter implements StorageInterface {
         } catch (\Exception $e) {
             error_log("Drive Upload Error: " . $e->getMessage());
             return false;
+        } finally {
+            if (is_resource($content)) {
+                fclose($content);
+            }
         }
     }
 
@@ -62,6 +66,21 @@ class GoogleDriveAdapter implements StorageInterface {
         // Google Drive images are hard to hotlink directly. 
         // Usually, you stream them via your own PHP proxy.
         return "/api/files/view/" . basename($path);
+    }
+
+    public function readStream(string $path) {
+        $fileId = $this->findFileIdByName(basename($path));
+        if (!$fileId) return null;
+
+        $response = $this->service->files->get($fileId, ['alt' => 'media']);
+        // The Google Client Library returns a Guzzle Stream, checking how to get resource
+        // Assuming getBody() returns a streamable object, we can detach the resource.
+        $body = $response->getBody();
+        if (method_exists($body, 'detach')) {
+            return $body->detach();
+        }
+        // Fallback if not streamable directly (or mock)
+        return null;
     }
 
     private function findFileIdByName($name) {
