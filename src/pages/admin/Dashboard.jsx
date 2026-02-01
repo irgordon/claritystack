@@ -28,7 +28,9 @@ export default function Dashboard() {
         setHealth(healthRes);
         setLogs(logsRes || []);
       } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
+        if (import.meta.env.DEV) {
+          console.error("Failed to fetch dashboard data", err);
+        }
       } finally {
         setLoading(false);
       }
