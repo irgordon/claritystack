@@ -96,7 +96,9 @@ export default function ProjectGallery() {
                 setTotalPages(res.meta.total_pages);
             }
         } catch (e) {
-            console.error(e);
+            if (import.meta.env.DEV) {
+                console.error(e);
+            }
         } finally {
             loadingRef.current = false;
         }
