@@ -90,7 +90,7 @@ export default function ProjectGallery() {
         try {
             const res = await secureFetch(`/api/projects/${id}/photos?page=${p}`);
             if (res.data && Array.isArray(res.data)) {
-                 setPhotos(prev => [...prev, ...res.data]);
+                 setPhotos(prev => prev.concat(res.data));
             }
             if (res.meta && res.meta.total_pages) {
                 setTotalPages(res.meta.total_pages);
