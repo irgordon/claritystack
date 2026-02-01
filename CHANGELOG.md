@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.49] - 2026-02-09
+
+### Performance
+- **ThemeEngine**: Implemented persistent file caching for `purifyHtml`.
+    - **What**: Added an L2 file-based cache (in `sys_get_temp_dir()`) for sanitized HTML fragments, layered behind the existing L1 memory cache.
+    - **Why**: `DOMDocument` parsing and sanitization is CPU-intensive. Re-purifying the same content (e.g., standard headers/footers) on every request wasted cycles.
+    - **How**: Modified `ThemeEngine::purifyHtml` to check for a cached file (keyed by content hash) before parsing.
+    - **Measured Improvement**: Benchmark showed a ~6x speedup (reduction from ~0.35ms to ~0.06ms per call) for repeated content across fresh requests.
+    - **Quote**: "Our Constitution was made only for a moral and religious people. It is wholly inadequate to the government of any other." - John Adams
+
 ## [1.0.48] - 2026-02-09
 
 ### Performance

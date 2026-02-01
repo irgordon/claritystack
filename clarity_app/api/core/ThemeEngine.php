@@ -188,9 +188,29 @@ class ThemeEngine {
 
         // PERFORMANCE: Cache purification results to avoid expensive DOM operations
         // Use MD5 hash of content as key to keep memory usage predictable
-        $cacheKey = md5($dirtyHtml);
+        // Include allowed tags in key to invalidate if security policy changes
+        $cacheKey = md5($dirtyHtml . serialize(self::ALLOWED_TAGS));
+
+        // L1: Memory Cache
         if (isset($this->purificationCache[$cacheKey])) {
             return $this->purificationCache[$cacheKey];
+        }
+
+        // L2: Persistent File Cache
+        $cacheDir = sys_get_temp_dir() . '/clarity_purify_cache';
+        $cacheFile = $cacheDir . '/' . $cacheKey . '.txt';
+
+        // Ensure cache directory exists (lazy creation)
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+
+        if (file_exists($cacheFile)) {
+            $cleanHtml = file_get_contents($cacheFile);
+            if ($cleanHtml !== false) {
+                $this->purificationCache[$cacheKey] = $cleanHtml;
+                return $cleanHtml;
+            }
         }
 
         // Suppress parsing errors for invalid HTML
@@ -248,6 +268,19 @@ class ThemeEngine {
 
         // Cache the result
         $this->purificationCache[$cacheKey] = $cleanHtml;
+
+        // Persist to L2 Cache
+        if (is_dir($cacheDir) && is_writable($cacheDir)) {
+            $tempFile = tempnam($cacheDir, 'tmp_');
+            if ($tempFile !== false) {
+                if (file_put_contents($tempFile, $cleanHtml) !== false) {
+                    @rename($tempFile, $cacheFile);
+                    @chmod($cacheFile, 0644);
+                } else {
+                    @unlink($tempFile);
+                }
+            }
+        }
 
         return $cleanHtml;
     }
