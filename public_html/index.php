@@ -73,8 +73,16 @@ $title = $page ? ($page['title'] . ' | ' . $siteName) : $siteName;
 $desc = $page['meta_description'] ?? $seo['default_description'] ?? '';
 $image = $page['og_image_url'] ?? $seo['default_og_image'] ?? '';
 
-// 5. Load React Shell
-$html = file_get_contents(__DIR__ . '/index.html');
+// 5. Load React Shell (Cached)
+$htmlPath = __DIR__ . '/index.html';
+// Use mtime to invalidate cache when deployment updates the file
+$htmlMtime = file_exists($htmlPath) ? filemtime($htmlPath) : 0;
+// Key includes mtime, so we can use a long TTL (24h)
+$cacheKey = 'index_html_' . $htmlMtime;
+
+$html = CacheService::remember('assets', $cacheKey, 86400, function() use ($htmlPath) {
+    return file_get_contents($htmlPath);
+});
 
 // 6. Inject Metadata
 $html = str_replace('<title>Vite App</title>', "<title>" . htmlspecialchars($title) . "</title>", $html);
