@@ -18,6 +18,8 @@ CREATE TABLE auth_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_auth_tokens_selector ON auth_tokens(selector);
+
 CREATE TABLE download_tokens (
     id SERIAL PRIMARY KEY,
     token_hash CHAR(64) NOT NULL,
