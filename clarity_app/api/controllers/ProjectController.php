@@ -79,16 +79,41 @@ class ProjectController {
         }
         unset($photo);
 
-        $total = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
-        $total->execute([$projectId]);
+        $total = $this->getPhotoCount($projectId);
 
         echo json_encode([
             'data' => $photos,
             'meta' => [
                 'current_page' => $page,
-                'total_pages' => ceil($total->fetchColumn() / $limit)
+                'total_pages' => ceil($total / $limit)
             ]
         ]);
+    }
+
+    private function getPhotoCount($projectId) {
+        $cacheFile = sys_get_temp_dir() . '/clarity_count_' . md5($projectId);
+
+        // Cache Hit (60s TTL)
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 60)) {
+            $count = @file_get_contents($cacheFile);
+            if ($count !== false) {
+                return (int)$count;
+            }
+        }
+
+        // Cache Miss
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM photos WHERE project_id = ?");
+        $stmt->execute([$projectId]);
+        $count = $stmt->fetchColumn();
+
+        // Atomic Write
+        $tempFile = tempnam(sys_get_temp_dir(), 'count_tmp');
+        if ($tempFile) {
+            file_put_contents($tempFile, $count);
+            rename($tempFile, $cacheFile);
+        }
+
+        return (int)$count;
     }
 }
 ?>
