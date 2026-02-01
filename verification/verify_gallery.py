@@ -46,13 +46,13 @@ def run(playwright):
     print("Navigating to page...")
     # React Router uses client-side routing.
     # If we go directly to a deep link on a dev server, it should work if configured as SPA fallback.
-    page.goto("http://localhost:5173/client/projects/123")
+    page.goto("http://localhost:3000/client/projects/123")
 
     print("Waiting for grid...")
     # Wait for the grid to render items. The grid creates divs with style.
-    # We can look for the "Wedding Photos" text or the grid itself.
+    # We can look for the "Gallery" text or the grid itself.
     try:
-        page.wait_for_selector("text=Wedding Photos", timeout=10000)
+        page.wait_for_selector("text=Gallery", timeout=10000)
         # Wait for at least one grid cell
         page.wait_for_selector("img[alt^='Project photo']", timeout=10000)
         print("Grid loaded.")

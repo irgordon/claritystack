@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo, memo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { secureFetch } from '../../utils/apiClient';
 import { FixedSizeGrid as Grid } from 'react-window';
@@ -47,6 +47,36 @@ const Cell = ({ columnIndex, rowIndex, style, data }) => {
     );
 };
 
+const GalleryGrid = memo(({ height, width, photos, onLoadMore }) => {
+    // Responsive column count
+    const columnCount = width < 640 ? 2 : width < 1024 ? 3 : 4;
+    const columnWidth = width / columnCount;
+    const rowCount = Math.ceil(photos.length / columnCount);
+
+    // Pass columnCount to itemData so Cell can calculate index
+    const itemData = useMemo(() => ({ photos, columnCount }), [photos, columnCount]);
+
+    return (
+        <Grid
+            columnCount={columnCount}
+            columnWidth={columnWidth}
+            height={height}
+            rowCount={rowCount}
+            rowHeight={columnWidth}
+            width={width}
+            itemData={itemData}
+            onItemsRendered={({ visibleRowStopIndex }) => {
+                if (visibleRowStopIndex >= rowCount - 2 && photos.length > 0) {
+                     onLoadMore();
+                }
+            }}
+            className="scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+        >
+            {Cell}
+        </Grid>
+    );
+});
+
 export default function ProjectGallery() {
     const { id } = useParams();
     const [photos, setPhotos] = useState([]); // Flat array of photos
@@ -77,6 +107,13 @@ export default function ProjectGallery() {
         window.location.href = res.url;
     };
 
+    const handleLoadMore = useCallback(() => {
+        if (!loadingRef.current) {
+             loadingRef.current = true;
+             setPage(prev => prev + 1);
+        }
+    }, []);
+
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -102,34 +139,13 @@ export default function ProjectGallery() {
                 <AutoSizer>
                     {({ height, width }) => {
                         if (!width || !height) return null;
-
-                        // Responsive column count
-                        const columnCount = width < 640 ? 2 : width < 1024 ? 3 : 4;
-                        const columnWidth = width / columnCount;
-                        const rowCount = Math.ceil(photos.length / columnCount);
-
-                        // Pass columnCount to itemData so Cell can calculate index
-                        const itemData = { photos, columnCount };
-
                         return (
-                            <Grid
-                                columnCount={columnCount}
-                                columnWidth={columnWidth}
+                            <GalleryGrid
                                 height={height}
-                                rowCount={rowCount}
-                                rowHeight={columnWidth}
                                 width={width}
-                                itemData={itemData}
-                                onItemsRendered={({ visibleRowStopIndex }) => {
-                                    if (visibleRowStopIndex >= rowCount - 2 && !loadingRef.current && photos.length > 0) {
-                                         loadingRef.current = true;
-                                         setPage(prev => prev + 1);
-                                    }
-                                }}
-                                className="scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
-                            >
-                                {Cell}
-                            </Grid>
+                                photos={photos}
+                                onLoadMore={handleLoadMore}
+                            />
                         );
                     }}
                 </AutoSizer>

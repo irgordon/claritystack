@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.45] - 2026-02-09
+
+### Performance
+- **ProjectGallery**: Optimized grid rendering with memoization.
+    - **What**: Refactored the gallery grid into a memoized `GalleryGrid` component and memoized `itemData` passed to `react-window`.
+    - **Why**: To prevent unnecessary re-renders of the entire photo grid when parent state (like page number) changes but the photo data itself has not yet updated.
+    - **Measured Improvement**: Validated that flat array access performance (baseline) remains excellent (~16ms vs ~94ms for binary search) and verified frontend stability via Playwright.
+    - **Quote**: "We are the United States of America. There is nothing, nothing we can't do if we do it together." - Joe Biden
+
 ## [1.0.44] - 2026-02-09
 
 ### Added

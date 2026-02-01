@@ -1,15 +1,12 @@
 
-> app@1.0.25 dev
-> vite
+> app@1.0.36 dev
+> vite --host 0.0.0.0 --port 3000
 
 [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
 
-  VITE v5.4.21  ready in 328 ms
+  VITE v5.4.21  ready in 308 ms
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-6:07:08 AM [vite] page reload clarity_app/api/controllers/SettingsController.php
-6:07:22 AM [vite] page reload clarity_app/api/controllers/FileController.php
-6:07:39 AM [vite] hmr update /src/pages/admin/Dashboard.jsx, /src/index.css
-6:09:05 AM [vite] page reload verification/verify_dashboard.py
-6:09:20 AM [vite] page reload verification/verify_install_ui.py
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.0.2:3000/
+1:17:44 AM [vite] page reload CHANGELOG.md
+1:19:16 AM [vite] page reload CHANGELOG.md
