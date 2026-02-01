@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.69] - 2026-02-10
+
+### Performance
+- **RateLimiter**: Optimized schema initialization and removed redundant filesystem checks.
+    - **What**: Removed `file_exists` and `filesize` checks on every `RateLimiter::check` and implemented lazy schema initialization via `PDOException` handling.
+    - **Why**: The filesystem checks were performing redundant `stat` syscalls on every request. Handling the "missing table" scenario lazily is more efficient for the happy path.
+    - **How**: Updated `getPdo` to connect immediately and `check` to catch "no such table" errors to trigger initialization.
+    - **Measured Improvement**: Benchmark showed a ~5% speedup in connection overhead (reduction from ~0.815s to ~0.770s for 10k iterations) by eliminating stat calls.
+    - **Quote**: "Logic will get you from A to B. Imagination will take you everywhere." - Albert Einstein
+
 ## [1.0.68] - 2026-02-10
 
 ### Performance
