@@ -7,6 +7,7 @@ use Core\Security;
 class ConfigHelper {
     // Static cache to persist settings in memory for the duration of the request
     private static $cache = null;
+    private static $storageCache = null;
 
     /**
      * Lazy-loads the configuration from the database.
@@ -90,6 +91,7 @@ class ConfigHelper {
             unlink($file);
         }
         self::$cache = null;
+        self::$storageCache = null;
     }
 
     /**
@@ -138,6 +140,10 @@ class ConfigHelper {
      * with keys mapped to uppercase for StorageFactory.
      */
     public static function getStorageConfig() {
+        if (self::$storageCache !== null) {
+            return self::$storageCache;
+        }
+
         self::load();
 
         $config = [];
@@ -153,6 +159,7 @@ class ConfigHelper {
             }
         }
 
+        self::$storageCache = $config;
         return $config;
     }
 }
