@@ -26,6 +26,8 @@ CREATE TABLE download_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_download_tokens_hash ON download_tokens(token_hash);
+
 -- 2. Configuration
 CREATE TABLE settings (
     id SERIAL PRIMARY KEY,
