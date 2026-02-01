@@ -105,64 +105,24 @@ graph TD
 
 ---
 
-## 📂 Directory Structure
-
-```text
-ClarityStack/
-├── api/                  # PHP Core & Controllers
-│   ├── config/           # Encypted Env Bootloader
-│   ├── core/             # ThemeEngine, Security, Storage Adapters
-│   └── controllers/      # API Endpoints
-├── themes/               # CMS Themes
-│   └── clarity_default/  # The default 'ClarityStack' theme
-├── src/                  # React Admin Dashboard (Source)
-├── public/               # Web Root (Entry Point)
-├── storage_secure/       # Private Uploads (Outside Web Root)
-└── database/             # SQL Schema & Migrations
-
-```
-
----
-
 ## 📦 Installation
 
-### Prerequisites
+For detailed step-by-step instructions for Nginx and VPS environments, please refer to [INSTALL.md](INSTALL.md).
 
-* PHP 8.2 (Extensions: `pgsql`, `gd`, `mbstring`, `zip`)
-* PostgreSQL 15+
-* Node.js 18+ (for building the frontend assets)
+### Quick Overview
 
-### Quick Start
-
-1. **Clone the Repo**
-```bash
-git clone [https://github.com/irgordon/claritystack.git](https://github.com/irgordon/claritystack.git)
-
-```
-
-
-2. **Install Dependencies**
-```bash
-# Backend
-cd clarity_app
-composer install
-
-# Frontend
-cd ../src
-npm install && npm run build
-
-```
-
-
-3. **Setup Database**
-Create a secure PostgreSQL database and user.
-4. **Run Installer**
-Navigate to `your-domain.com/install` to launch the Setup Wizard. This will:
-* Generate the secure `env.php` configuration.
-* Run database migrations.
-* Create your Super Admin account.
-
-
+1.  **Clone the Repo**:
+    ```bash
+    git clone https://github.com/irgordon/claritystack.git
+    ```
+2.  **Build Frontend**:
+    ```bash
+    cd claritystack
+    npm install && npm run build
+    ```
+3.  **Setup Database**: Create a PostgreSQL database (e.g., `clarity_db`).
+4.  **Configure Web Server**: Point Nginx/Apache to `public_html` and route all requests to `index.php`.
+5.  **Run Installer**: Visit `http://your-domain.com/install` to configure the database and create your admin account.
 
 ---
 
@@ -189,5 +149,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-```

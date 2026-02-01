@@ -2,6 +2,36 @@
 // Adjust this path to point to your private backend folder
 require_once __DIR__ . '/../clarity_app/api/core/Database.php';
 require_once __DIR__ . '/../clarity_app/api/core/ConfigHelper.php';
+require_once __DIR__ . '/../clarity_app/api/core/Router.php';
+
+// 0. API ROUTING
+$requestUri = $_SERVER['REQUEST_URI'];
+if (strpos($requestUri, '/api/') === 0) {
+    header('Content-Type: application/json');
+    $router = new Router();
+
+    // Define Routes
+    $router->add('POST', '/install', 'InstallController', 'install');
+
+    // Auth
+    $router->add('POST', '/auth/magic-link', 'AuthController', 'requestLink');
+    $router->add('POST', '/auth/verify', 'AuthController', 'verifyLink');
+
+    // Admin Settings
+    $router->add('GET', '/admin/settings', 'SettingsController', 'getSettings');
+    $router->add('POST', '/admin/settings/storage', 'SettingsController', 'updateStorage');
+    $router->add('GET', '/admin/health', 'SettingsController', 'getSystemHealth');
+    $router->add('GET', '/admin/logs', 'SettingsController', 'getLogs');
+
+    // Logging
+    $router->add('POST', '/log/client', 'SettingsController', 'logClientEvent');
+
+    // Projects
+    $router->add('GET', '/projects/{id}/photos', 'ProjectController', 'listPhotos');
+
+    $router->dispatch($requestUri);
+    exit;
+}
 
 // 1. Identify the requested path
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -22,17 +52,24 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 3600)) {
 if (!$page) {
     // Connect to DB only if cache miss
     $db = Database::getInstance()->connect();
-    $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
-    $stmt->execute([$slug]);
-    $page = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Write to cache if page found
-    if ($page) {
-        // Atomic write
-        $tempFile = tempnam(sys_get_temp_dir(), 'seo_tmp');
-        if ($tempFile) {
-            file_put_contents($tempFile, json_encode($page));
-            rename($tempFile, $cacheFile);
+    if ($db) {
+        try {
+            $stmt = $db->prepare("SELECT title, meta_description, og_image_url FROM pages WHERE slug = ?");
+            $stmt->execute([$slug]);
+            $page = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Write to cache if page found
+            if ($page) {
+                // Atomic write
+                $tempFile = tempnam(sys_get_temp_dir(), 'seo_tmp');
+                if ($tempFile) {
+                    file_put_contents($tempFile, json_encode($page));
+                    rename($tempFile, $cacheFile);
+                }
+            }
+        } catch (Exception $e) {
+            // DB error or not installed, ignore and serve default shell
         }
     }
 }
