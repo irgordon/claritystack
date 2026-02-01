@@ -9,8 +9,8 @@ try {
     // Setup DB
     $pdo = new PDO("sqlite:$dbFile");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, public_config TEXT, private_config TEXT, updated_at DATETIME)");
-    $pdo->exec("INSERT INTO settings (public_config, private_config) VALUES ('{\"site_name\":\"Test Site\"}', '{\"secret\":\"123\"}')");
+    $pdo->exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, business_name TEXT, public_config TEXT, private_config TEXT, updated_at DATETIME)");
+    $pdo->exec("INSERT INTO settings (business_name, public_config, private_config) VALUES ('Test Biz', '{\"site_name\":\"Test Site\"}', '{\"secret\":\"123\"}')");
 
     Database::getInstance()->setConfig([
         'DB_DRIVER' => 'sqlite',
