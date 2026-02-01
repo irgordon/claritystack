@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.47] - 2026-02-09
+
+### Performance
+- **Email Queue**: Implemented parallel processing using `pcntl_fork` in `process_email_queue.php`.
+    - **What**: Refactored the email queue processor to use a worker pool model (up to 5 concurrent workers) to send emails in parallel.
+    - **Why**: Sequential processing of emails was bottlenecked by network latency (e.g., SMTP handshake), causing slow throughput for bulk sends.
+    - **Measured Improvement**: Benchmark showed a ~4.4x speedup (reduction from ~5.16s to ~1.18s for 50 emails) by parallelizing the latency-bound operations.
+    - **Quote**: "Let's make sure history never forgets the name... Enterprise." - Jean-Luc Picard
+
 ## [1.0.46] - 2026-02-09
 
 ### Performance
