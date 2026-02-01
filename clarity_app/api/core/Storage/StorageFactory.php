@@ -34,7 +34,12 @@ class StorageFactory {
 
             case 'local':
             default:
-                return new LocalAdapter($config['STORAGE_PATH'] ?? __DIR__ . '/../../../../storage_secure');
+                $path = $config['STORAGE_PATH'] ?? __DIR__ . '/../../../../storage_secure';
+                $localConfig = [
+                    'sendfile_header' => $config['SENDFILE_HEADER'] ?? null,
+                    'sendfile_prefix' => $config['SENDFILE_PREFIX'] ?? null,
+                ];
+                return new LocalAdapter($path, $localConfig);
         }
     }
 }
