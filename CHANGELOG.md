@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.76] - 2026-02-10
+
+### Reliability
+- **SmtpClient**: Refactored STARTTLS support for greater flexibility.
+    - **What**: Updated `SmtpClient` to dynamically detect `STARTTLS` support via the `EHLO` response when in 'auto' mode, and to support it on any port (not just 587).
+    - **Why**: The previous implementation hardcoded STARTTLS to port 587, preventing use on other ports (e.g., 25, 2525) that might support it. It also labeled the support as "Basic".
+    - **How**: Captured the `EHLO` response and parsed it for the `STARTTLS` capability flag. Updated connection logic to trigger STARTTLS if explicitly requested or if auto-detected.
+    - **Measured Improvement**: Verified functional correctness via `tests/verify_smtp_encryption_logic.php`, confirming that Auto mode now works on non-standard ports when advertised, while remaining backward compatible.
+    - **Quote**: "Adaptability is about the powerful difference between adapting to cope and adapting to win." - Max McKeown
+
 ## [1.0.75] - 2026-02-10
 
 ### Performance

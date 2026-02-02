@@ -38,11 +38,11 @@ class SmtpClient {
             throw new Exception("SMTP Unexpected Banner: $response");
         }
 
-        $this->command("EHLO " . gethostname());
+        $ehloResponse = $this->command("EHLO " . gethostname());
 
-        // STARTTLS Logic: Explicit 'tls' or Auto detection on port 587
-        // Note: If encryption is explicitly 'none', we skip this.
-        $shouldStartTls = ($this->encryption === 'tls') || ($this->encryption === null && $this->port == 587);
+        // Improved STARTTLS Logic: Check capability or enforce if explicit
+        $serverSupportsTls = (stripos($ehloResponse, 'STARTTLS') !== false);
+        $shouldStartTls = ($this->encryption === 'tls') || ($this->encryption === null && $serverSupportsTls);
 
         if ($shouldStartTls) {
             $this->command("STARTTLS", 220);
@@ -166,6 +166,8 @@ class SmtpClient {
              // For simplicity, we stick to strict check for now, except for EHLO which returns 250
              throw new Exception("SMTP Command '$cmd' failed: $response");
         }
+
+        return $response;
     }
 
     private function readResponse() {
