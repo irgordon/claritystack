@@ -7,22 +7,25 @@ class SmtpClient {
     private $username;
     private $password;
     private $timeout;
+    private $encryption; // 'ssl', 'tls', or null/auto
     private $debug = false;
 
-    public function __construct($host, $port, $username = null, $password = null, $timeout = 30) {
+    public function __construct($host, $port, $username = null, $password = null, $timeout = 30, $encryption = null) {
         $this->host = $host;
         $this->port = $port;
         $this->username = $username;
         $this->password = $password;
         $this->timeout = $timeout;
+        $this->encryption = $encryption ? strtolower($encryption) : null;
     }
 
     public function connect() {
-        $connectionString = "tcp://{$this->host}:{$this->port}";
-        // Simple SSL detection logic can be added here if needed, e.g. port 465
-        if ($this->port == 465) {
-            $connectionString = "ssl://{$this->host}:{$this->port}";
+        $protocol = 'tcp';
+        if ($this->encryption === 'ssl' || ($this->encryption === null && $this->port == 465)) {
+            $protocol = 'ssl';
         }
+
+        $connectionString = "{$protocol}://{$this->host}:{$this->port}";
 
         $this->socket = stream_socket_client($connectionString, $errno, $errstr, $this->timeout);
 
@@ -37,8 +40,11 @@ class SmtpClient {
 
         $this->command("EHLO " . gethostname());
 
-        // Basic STARTTLS support for port 587
-        if ($this->port == 587) {
+        // STARTTLS Logic: Explicit 'tls' or Auto detection on port 587
+        // Note: If encryption is explicitly 'none', we skip this.
+        $shouldStartTls = ($this->encryption === 'tls') || ($this->encryption === null && $this->port == 587);
+
+        if ($shouldStartTls) {
             $this->command("STARTTLS");
             if (!stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                 throw new Exception("SMTP TLS Negotiation Failed");

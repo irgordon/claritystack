@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.72] - 2026-02-10
+
+### Security
+- **SmtpClient**: Enhanced SSL/TLS detection logic.
+    - **What**: Updated `SmtpClient` to accept an explicit `encryption` parameter ('ssl', 'tls', or 'none') and updated `process_email_queue.php` to pass this from configuration.
+    - **Why**: The previous auto-detection logic relied solely on port numbers (465 for SSL), which was insufficient for providers using non-standard ports or requiring explicit TLS on port 587.
+    - **How**: Added logic to the `connect` method to respect the explicit configuration, allowing forceful SSL/TLS or plain TCP connections as needed.
+    - **Measured Improvement**: Verified functional correctness via `tests/verify_smtp_encryption_logic.php`, confirming support for all encryption modes and backward compatibility with auto-detection.
+    - **Quote**: "Trust, but verify." - Russian Proverb
+
 ## [1.0.71] - 2026-02-10
 
 ### Performance
