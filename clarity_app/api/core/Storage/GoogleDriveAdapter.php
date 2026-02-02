@@ -84,6 +84,38 @@ class GoogleDriveAdapter implements StorageInterface {
         return null;
     }
 
+    public function output(string $path) {
+        $fileId = $this->findFileIdByName(basename($path));
+        if (!$fileId) {
+            http_response_code(404);
+            return;
+        }
+
+        // Optimization: Try to get a direct download link (webContentLink)
+        // This avoids proxying the traffic through PHP
+        try {
+            $file = $this->service->files->get($fileId, ['fields' => 'webContentLink, size']);
+            if ($file->getWebContentLink()) {
+                header("Location: " . $file->getWebContentLink());
+                exit;
+            }
+
+            // If we can't redirect, at least set the length if we have it
+            if ($file->getSize()) {
+                header('Content-Length: ' . $file->getSize());
+            }
+        } catch (\Exception $e) {
+            // Fallback to streaming if metadata fetch fails
+        }
+
+        // Fallback: Proxy the stream
+        $stream = $this->readStream($path);
+        if ($stream && is_resource($stream)) {
+            fpassthru($stream);
+            fclose($stream);
+        }
+    }
+
     private function findFileIdByName($name) {
         return CacheService::remember('google_drive_ids', $name, 3600, function() use ($name) {
             $optParams = [

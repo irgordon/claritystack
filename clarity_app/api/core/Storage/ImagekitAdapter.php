@@ -49,4 +49,10 @@ class ImagekitAdapter implements StorageInterface {
             'path' => $path,
         ]);
     }
+
+    public function output(string $path) {
+        $url = $this->getUrl($path);
+        header("Location: " . $url);
+        exit;
+    }
 }
