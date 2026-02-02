@@ -35,7 +35,9 @@ function processEmailsBatch(array $emails, PDO $db, string $nowFn, array $smtpCo
                 $smtpConfig['SMTP_HOST'],
                 $smtpConfig['SMTP_PORT'],
                 $smtpConfig['SMTP_USER'] ?? null,
-                $smtpConfig['SMTP_PASS'] ?? null
+                $smtpConfig['SMTP_PASS'] ?? null,
+                30,
+                $smtpConfig['SMTP_ENCRYPTION'] ?? null
             );
             $smtpClient->connect();
             echo "SMTP Connected.\n";
@@ -129,6 +131,7 @@ try {
         'SMTP_PORT' => $storageConfig['SMTP_PORT'] ?? null,
         'SMTP_USER' => $storageConfig['SMTP_USER'] ?? null,
         'SMTP_PASS' => $storageConfig['SMTP_PASS'] ?? null,
+        'SMTP_ENCRYPTION' => $storageConfig['SMTP_ENCRYPTION'] ?? null,
     ];
 
     $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
