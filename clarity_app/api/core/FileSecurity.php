@@ -24,7 +24,12 @@ class FileSecurity {
     /**
      * The Active Storage Adapter (Local, S3, Cloudinary, etc.)
      */
-    private $storage;
+    public $storage; // Made public for worker access if needed, or use accessor
+
+    /**
+     * Database Connection
+     */
+    private $db;
 
     /**
      * Constructor
@@ -32,10 +37,10 @@ class FileSecurity {
      */
     public function __construct() {
         // 1. Connect to Database
-        $db = \Database::getInstance()->connect();
+        $this->db = \Database::getInstance()->connect();
 
         // 2. Fetch Encrypted Settings
-        $stmt = $db->query("SELECT public_config, private_config FROM settings LIMIT 1");
+        $stmt = $this->db->query("SELECT public_config, private_config FROM settings LIMIT 1");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // 3. Prepare Config Array
@@ -45,7 +50,7 @@ class FileSecurity {
             // Fallback: If DB is empty (fresh install), default to Local Storage
             $config = [
                 'STORAGE_DRIVER' => 'local',
-                'STORAGE_PATH'   => __DIR__ . '/../../../../storage_secure'
+                'STORAGE_PATH'   => __DIR__ . '/../../../storage_secure'
             ];
         } else {
             // Decode JSON Columns
@@ -55,7 +60,7 @@ class FileSecurity {
             // 4. Decrypt & Map Settings
             $config = [
                 'STORAGE_DRIVER' => $public['storage_driver'] ?? 'local',
-                'STORAGE_PATH'   => __DIR__ . '/../../../../storage_secure',
+                'STORAGE_PATH'   => __DIR__ . '/../../../storage_secure',
                 
                 // Cloudinary Config
                 'CLOUDINARY_NAME'   => $public['cloudinary_name'] ?? '',
@@ -119,16 +124,8 @@ class FileSecurity {
             throw new \Exception("Failed to write file to storage provider.");
         }
 
-        // 6. Generate & Save Thumbnail
-        $tempThumb = $file['tmp_name'] . '_thumb.jpg';
-        $this->generateThumbnail($file['tmp_name'], $tempThumb, 400);
-        
-        $this->storage->put($tempThumb, $thumbPath);
-        
-        // Cleanup temp file
-        if (file_exists($tempThumb)) {
-            unlink($tempThumb);
-        }
+        // 6. Queue Thumbnail Generation (Async)
+        $this->queueThumbnail($originalPath, $thumbPath, 400, $file['tmp_name']);
 
         // 7. Return Data
         return [
@@ -142,9 +139,72 @@ class FileSecurity {
     }
 
     /**
+     * Queue Thumbnail Job
+     */
+    private function queueThumbnail($originalPath, $thumbPath, $width, $localSourcePath = null) {
+        try {
+            $now = date('Y-m-d H:i:s');
+            $stmt = $this->db->prepare("INSERT INTO image_queue (original_path, thumb_path, width, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)");
+            $stmt->execute([$originalPath, $thumbPath, $width, $now, $now]);
+        } catch (\Exception $e) {
+            // Fallback: If queue fails, generate synchronously to ensure system reliability
+            error_log("Queue failed: " . $e->getMessage() . ". Falling back to sync generation.");
+
+            if ($localSourcePath && file_exists($localSourcePath)) {
+                $tempThumb = $localSourcePath . '_thumb_fallback.jpg';
+                try {
+                    $this->generateThumbnail($localSourcePath, $tempThumb, $width);
+                    $this->storage->put($tempThumb, $thumbPath);
+                } catch (\Exception $ex) {
+                    error_log("Fallback generation failed: " . $ex->getMessage());
+                }
+                if (file_exists($tempThumb)) unlink($tempThumb);
+            }
+        }
+    }
+
+    /**
+     * Process a Queue Job (Called by Worker)
+     */
+    public function processQueueJob($originalPath, $thumbPath, $width) {
+        // 1. Fetch content from storage
+        // Note: For large files, stream copy is better, but get() returns string in LocalAdapter.
+        $content = $this->storage->get($originalPath);
+        if ($content === null) {
+            return false; // Source not found
+        }
+
+        // 2. Save to temp file
+        $tempSource = sys_get_temp_dir() . '/thumb_src_' . bin2hex(random_bytes(8));
+        file_put_contents($tempSource, $content);
+
+        // 3. Generate Thumbnail
+        $tempDest = $tempSource . '_thumb.jpg';
+        try {
+            $this->generateThumbnail($tempSource, $tempDest, $width);
+
+            // 4. Upload Thumbnail
+            if (file_exists($tempDest)) {
+                $this->storage->put($tempDest, $thumbPath);
+                unlink($tempDest);
+                unlink($tempSource);
+                return true;
+            }
+        } catch (\Exception $e) {
+            // Cleanup on error
+            if (file_exists($tempDest)) unlink($tempDest);
+            if (file_exists($tempSource)) unlink($tempSource);
+            throw $e;
+        }
+
+        if (file_exists($tempSource)) unlink($tempSource);
+        return false;
+    }
+
+    /**
      * Thumbnail Generator (GD Library)
      */
-    private function generateThumbnail($sourcePath, $destPath, $maxWidth) {
+    public function generateThumbnail($sourcePath, $destPath, $maxWidth) {
         list($width, $height, $type) = getimagesize($sourcePath);
         
         $ratio = $width / $height;
