@@ -66,4 +66,10 @@ class CloudinaryAdapter implements StorageInterface {
         $publicId = dirname($path) . '/' . pathinfo($path, PATHINFO_FILENAME);
         return $this->cloudinary->image($publicId)->toUrl();
     }
+
+    public function output(string $path) {
+        $url = $this->getUrl($path);
+        header("Location: " . $url);
+        exit;
+    }
 }

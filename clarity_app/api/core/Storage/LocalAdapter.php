@@ -53,7 +53,7 @@ class LocalAdapter implements StorageInterface {
 
     /**
      * Outputs the file to the browser.
-     * Used by FileController for secure streaming.
+     * Implements StorageInterface::output using X-Sendfile/X-Accel-Redirect if configured.
      */
     public function output(string $path) {
         $fullPath = $this->getFullPath($path);
