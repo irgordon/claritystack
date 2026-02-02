@@ -2,3 +2,4 @@ node_modules
 public_html/assets/
 public_html/index.html
 clarity_app/themes/clarity_default/public/css/style.css
+storage_secure/
