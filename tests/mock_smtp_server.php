@@ -1,7 +1,9 @@
 <?php
 // tests/mock_smtp_server.php
 
-$port = 2525;
+$port = isset($argv[1]) ? (int)$argv[1] : 2525;
+$advertiseTls = !in_array('--no-tls', $argv);
+
 $socket = stream_socket_server("tcp://0.0.0.0:$port", $errno, $errstr);
 
 if (!$socket) {
@@ -9,10 +11,13 @@ if (!$socket) {
     exit(1);
 }
 
-echo "Mock SMTP Server listening on port $port\n";
+echo "Mock SMTP Server listening on port $port (TLS Advertised: " . ($advertiseTls ? 'Yes' : 'No') . ")\n";
 
 // Write logs to a file for verification
 $logFile = __DIR__ . '/mock_smtp.log';
+if ($port != 2525) {
+    $logFile = __DIR__ . "/mock_smtp_$port.log";
+}
 file_put_contents($logFile, ""); // Clear log
 
 while ($conn = stream_socket_accept($socket, -1)) {
@@ -37,7 +42,12 @@ while ($conn = stream_socket_accept($socket, -1)) {
 
         if (stripos($cmd, 'EHLO') === 0 || stripos($cmd, 'HELO') === 0) {
             $state = 'READY';
-            fwrite($conn, "250-Hello\r\n250 AUTH LOGIN\r\n");
+            $ehloResp = "250-Hello\r\n";
+            if ($advertiseTls) {
+                $ehloResp .= "250-STARTTLS\r\n";
+            }
+            $ehloResp .= "250 AUTH LOGIN\r\n";
+            fwrite($conn, $ehloResp);
         } elseif (stripos($cmd, 'AUTH') === 0) {
              // Handle AUTH LOGIN sequence blindly
              fwrite($conn, "334 VXNlcm5hbWU6\r\n"); // Username:
