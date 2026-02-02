@@ -81,6 +81,8 @@ while ($conn = stream_socket_accept($socket, -1)) {
                 $state = 'DATA_MODE';
                 fwrite($conn, "354 Start mail input; end with <CRLF>.<CRLF>\r\n");
             }
+        } elseif (stripos($cmd, 'STARTTLS') === 0) {
+            fwrite($conn, "220 Ready to start TLS\r\n");
         } elseif (stripos($cmd, 'RSET') === 0) {
             $state = 'READY';
             fwrite($conn, "250 OK\r\n");

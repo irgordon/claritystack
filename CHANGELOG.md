@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.73] - 2026-02-10
+
+### Reliability
+- **SmtpClient**: Added support for loose SMTP success codes and fixed STARTTLS expectation.
+    - **What**: Updated `SmtpClient::command` to accept an array of valid success codes and updated `connect` to strictly expect `220` for `STARTTLS`.
+    - **Why**: Some SMTP servers (or intermediate proxies) return non-standard success codes (e.g., `251 User not local; will forward`). The strict check for a single code was causing valid transactions to fail. Additionally, `STARTTLS` returns `220`, not the default `250`, which was technically a bug even if it worked by coincidence or was unhandled in the mock.
+    - **How**: Modified `command` to check against a list of codes if provided. Updated the `STARTTLS` call to explicitly expect `220`.
+    - **Measured Improvement**: Verified functional correctness via `tests/repro_smtp_loose.php` (mocking a `251` response) and `tests/verify_smtp_encryption_logic.php` to ensure no regression in standard flows.
+    - **Quote**: "Be strict in what you send, but generous in what you receive." - Jon Postel
+
 ## [1.0.72] - 2026-02-10
 
 ### Security
