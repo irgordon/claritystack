@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/ConfigHelper.php';
 require_once __DIR__ . '/../core/Storage/StorageFactory.php';
+require_once __DIR__ . '/../core/ZipStreamer.php';
 
 use Core\Storage\StorageFactory;
+use Core\ZipStreamer;
 
 class DownloadController {
     private $db;
@@ -102,66 +104,32 @@ class DownloadController {
         $config = \ConfigHelper::getStorageConfig();
         $storage = StorageFactory::create($config);
 
-        // Create Zip
-        $zipFile = tempnam(sys_get_temp_dir(), 'zip_');
-        $zip = new ZipArchive();
-        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            http_response_code(500);
-            die("Could not create zip archive");
-        }
+        // Sanitize filename to prevent header injection
+        $safeTitle = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $row['title'] ?: 'download');
 
-        $tempFiles = [];
+        // Clear output buffers
+        if (ob_get_level()) ob_end_clean();
+
+        // Send Headers
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $safeTitle . '.zip"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        // We do not send Content-Length for streaming response
+
+        // Start Streaming
+        $zip = new ZipStreamer();
 
         foreach ($photos as $photo) {
             $stream = $storage->readStream($photo['system_filename']);
             if ($stream) {
-                // Optimization: If local file stream, add directly from path to avoid copying
-                $meta = stream_get_meta_data($stream);
-                if ($meta['wrapper_type'] === 'plainfile' && isset($meta['uri']) && file_exists($meta['uri'])) {
-                     $zip->addFile($meta['uri'], $photo['original_filename']);
-                } else {
-                     // Remote stream: Copy to temp file
-                     $tmp = tempnam(sys_get_temp_dir(), 'p_');
-                     $dest = fopen($tmp, 'wb');
-                     if (stream_copy_to_stream($stream, $dest) > 0) {
-                        fclose($dest);
-                        $zip->addFile($tmp, $photo['original_filename']);
-                        $tempFiles[] = $tmp;
-                     } else {
-                        fclose($dest);
-                        @unlink($tmp);
-                     }
-                }
+                // ZipStreamer handles streaming directly from source to output
+                $zip->addFileFromStream($photo['original_filename'], $stream);
                 fclose($stream);
             }
         }
 
-        $zip->close();
-        
-        // Cleanup temp files (ZipArchive has read them by now)
-        foreach ($tempFiles as $f) {
-            @unlink($f);
-        }
-
-        if (file_exists($zipFile)) {
-            // Clear output buffers
-            if (ob_get_level()) ob_end_clean();
-
-            // Sanitize filename to prevent header injection
-            $safeTitle = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $row['title'] ?: 'download');
-
-            header('Content-Type: application/zip');
-            header('Content-Disposition: attachment; filename="' . $safeTitle . '.zip"');
-            header('Content-Length: ' . filesize($zipFile));
-            header('Pragma: no-cache');
-            header('Expires: 0');
-
-            readfile($zipFile);
-            unlink($zipFile);
-        } else {
-            http_response_code(500);
-            die("Error generating zip");
-        }
+        $zip->finish();
     }
 }
 ?>
