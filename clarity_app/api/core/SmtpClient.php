@@ -67,7 +67,8 @@ class SmtpClient {
         $to = $this->sanitizeHeader($to);
         $subject = $this->sanitizeHeader($subject);
 
-        // Reset state if necessary (RSET command is useful if a previous transaction failed, but for now we assume happy path)
+        // Reset state if necessary (RSET command is useful if a previous transaction failed)
+        $this->command("RSET");
         $this->command("MAIL FROM: <$from>");
         $this->command("RCPT TO: <$to>");
         $this->command("DATA", 354);
