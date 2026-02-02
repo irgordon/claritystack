@@ -45,7 +45,7 @@ class SmtpClient {
         $shouldStartTls = ($this->encryption === 'tls') || ($this->encryption === null && $this->port == 587);
 
         if ($shouldStartTls) {
-            $this->command("STARTTLS");
+            $this->command("STARTTLS", 220);
             if (!stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                 throw new Exception("SMTP TLS Negotiation Failed");
             }
@@ -147,7 +147,21 @@ class SmtpClient {
         // Check if response starts with expected code
         // Responses can be multi-line, we care about the code on the last line (or first line usually works for simple checks)
         // But usually the code is at the start.
-        if (substr($response, 0, 3) != (string)$expectCode) {
+        $actualCode = substr($response, 0, 3);
+        $valid = false;
+
+        if (is_array($expectCode)) {
+            foreach ($expectCode as $code) {
+                if ($actualCode === (string)$code) {
+                    $valid = true;
+                    break;
+                }
+            }
+        } else {
+            $valid = ($actualCode === (string)$expectCode);
+        }
+
+        if (!$valid) {
              // Some commands might return different success codes, handle loosely if needed
              // For simplicity, we stick to strict check for now, except for EHLO which returns 250
              throw new Exception("SMTP Command '$cmd' failed: $response");
