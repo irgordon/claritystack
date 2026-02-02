@@ -196,8 +196,9 @@ class SettingsController {
             $pos = $seek;
 
             // Count newlines
-            $lines = explode("\n", $buffer);
-            $lineCount = count($lines);
+            // Optimization: substr_count is much faster than explode + count
+            // We add 1 to match explode's behavior (n newlines => n+1 elements)
+            $lineCount = substr_count($buffer, "\n") + 1;
 
             if ($lineCount > $maxLines + 1 || ($pos == 0 && $lineCount >= $maxLines)) {
                  break;
